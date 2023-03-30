@@ -18,7 +18,7 @@ using SlugBase;
 
 namespace RotCat;
 
-[BepInPlugin("rotcat", "RotCat", "0.0.1")]
+[BepInPlugin("rotcat", "RotCat", "0.0.2")]
 public class RotCat : BaseUnityPlugin
 {
     bool init = false;
@@ -30,13 +30,7 @@ public class RotCat : BaseUnityPlugin
     public SlugBaseCharacter Character;
     public void OnEnable()
     {
-        //On.Player.AddFood += PlayerAddFoodHook;
         On.RainWorld.OnModsInit += Init;
-
-        /*On.FlareBomb.Update += (orig, self, eu) => {
-            orig(self, eu);
-            self.flashAplha = 0f;
-        };*/
         
         On.Player.ctor += (orig, self, abstractCreature, world) =>
         {
@@ -146,6 +140,12 @@ public class RotCat : BaseUnityPlugin
             orig(self, graspIndex);
             self.grasps[graspIndex].grabbedChunk.owner.Destroy();
         };*/
+
+        On.DaddyCorruption.LittleLeg.Update += (orig, self, eu) => {
+            orig(self, eu);
+            base.Logger.LogDebug(self?.grabChunk?.owner?.GetType());
+            //if(self.grabChunk.owner.GetType())
+        };
 
         On.Player.SpitOutOfShortCut += (orig, self, pos, newRoom, spitOutAllStacks) => {
             orig(self, pos, newRoom, spitOutAllStacks);
@@ -359,8 +359,30 @@ public class RotCat : BaseUnityPlugin
             tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
                 string name = sLeaser.sprites[9]?.element?.name;
+                //base.Logger.LogDebug(self.player.flipDirection);
                 if (name != null && name.StartsWith("Face") && something.faceAtlas._elementsByName.TryGetValue("Rot" + name, out var element)) {
                     sLeaser.sprites[9].element = element;
+                    //base.Logger.LogDebug(element.name);
+                    //base.Logger.LogDebug(sLeaser.sprites[9].scaleX);
+                    if(sLeaser.sprites[9].scaleX < 0) {
+                        if(element.name == "RotFaceA0" || element.name == "RotFaceA8" || element.name == "RotFaceB0" || element.name == "RotFaceB8" || element.name == "RotFaceStunned") {
+                            sLeaser.sprites[9].scaleX = 1f;
+                        }
+                        else if(element.name.StartsWith("RotFaceA")) {
+                            char num = element.name[8];
+                            //base.Logger.LogDebug(element.name.Substring(0,7));
+                            //base.Logger.LogDebug(num);
+                            sLeaser.sprites[9].element = something.faceAtlas._elementsByName[element.name.Substring(0,7)+"E"+num];
+                            sLeaser.sprites[9].scaleX = 1f;
+                        }
+                        else if(element.name.StartsWith("RotFaceB")) {
+                            char num = element.name[8];
+                            //base.Logger.LogDebug(element.name.Substring(0,7));
+                            //base.Logger.LogDebug(num);
+                            sLeaser.sprites[9].element = something.faceAtlas._elementsByName[element.name.Substring(0,7)+"F"+num];
+                            sLeaser.sprites[9].scaleX = 1f;
+                        }
+                    }
                 }
                 //sLeaser.sprites[something.initialCircleSprite-1].SetPosition(self.player.mainBodyChunk.pos + ((self.player.mainBodyChunk.pos-self.player.bodyChunks[1].pos).normalized * -6) - rCam.pos);
                 //sLeaser.sprites[something.initialCircleSprite-1].color = Color.white;
