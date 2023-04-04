@@ -50,6 +50,7 @@ public class RotCat : BaseUnityPlugin
                 if (Character.Features.TryGet(PlayerFeatures.CustomColors, out var customColors)) {
                     something.rotEyeColor = customColors[2].GetColor(playerNumber);
                 }
+                self.abstractCreature.tentacleImmune = true;
                 something.totalCircleSprites = something.circleAmmount * 4;
                 something.tentacleOne = new Line();
                 something.tentacleTwo = new Line();
@@ -126,14 +127,15 @@ public class RotCat : BaseUnityPlugin
         On.Player.NewRoom += (orig, self, newRoom) =>
         {
             orig(self, newRoom);
-            /*tenticleStuff.TryGetValue(self, out var something);
-            foreach (var tentacle in something.tentacles)
-            {
-                foreach (var chunk in tentacle.tChunks)
-                {
-                    chunk.pos = self.mainBodyChunk.pos;
+            tenticleStuff.TryGetValue(self, out var something);
+            if (something.isRot) {
+                for (int i = 0; i < something.tentacles.Length; i++) {
+                    for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {
+                        something.tentacles[i].pList[j].position = self.mainBodyChunk.pos - new Vector2(0,j);
+                        something.tentacles[i].pList[j].prevPosition = self.mainBodyChunk.pos - new Vector2(0,j);
+                    }
                 }
-            }*/
+            }
         };
 
         /*On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
@@ -141,10 +143,50 @@ public class RotCat : BaseUnityPlugin
             self.grasps[graspIndex].grabbedChunk.owner.Destroy();
         };*/
 
+        /*On.DaddyTentacle.Update += (orig, self) => {
+            orig(self);
+            for(int i = 0; i < self?.room?.PlayersInRoom?.Count; i++) {
+                tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
+                if (something.isRot) {
+                    if(self?.grabChunk?.owner?.GetType() == typeof(Player)) {
+                        self.grabChunk = null;
+                    }
+                }
+            }
+        };*/
+
+        On.DaddyLongLegs.Update += (orig, self, eu) => {
+            for(int i = 0; i < self?.room?.PlayersInRoom?.Count; i++) {
+                tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
+                if (something.isRot && self.Template.type == MoreSlugcatsEnums.CreatureTemplateType.TerrorLongLegs) {
+                    self.room.PlayersInRoom[i].abstractCreature.tentacleImmune = false;
+                }
+            }
+            orig(self, eu);
+            for(int i = 0; i < self?.room?.PlayersInRoom?.Count; i++) {
+                tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
+                if (something.isRot && self.Template.type != MoreSlugcatsEnums.CreatureTemplateType.TerrorLongLegs) {
+                    for(int j = 0; j < self?.grasps?.Length; j++) {
+                        if (self?.grasps[j] != null && self?.grasps[j].grabbedChunk.owner == self.room.PlayersInRoom[i]) {
+                            self.grasps[j] = null;
+                        }
+                    }
+                    self.room.PlayersInRoom[i].abstractCreature.tentacleImmune = true;
+                }
+            }
+        };
+
         On.DaddyCorruption.LittleLeg.Update += (orig, self, eu) => {
             orig(self, eu);
-            base.Logger.LogDebug(self?.grabChunk?.owner?.GetType());
-            //if(self.grabChunk.owner.GetType())
+            for(int i = 0; i < self?.room?.PlayersInRoom?.Count; i++) {
+                tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
+                if (something.isRot) {
+                    base.Logger.LogDebug(self?.grabChunk?.owner?.GetType());
+                    if(self?.grabChunk?.owner?.GetType() == typeof(Player)) {
+                        self.grabChunk = null;
+                    }
+                }
+            }
         };
 
         On.Player.SpitOutOfShortCut += (orig, self, pos, newRoom, spitOutAllStacks) => {
@@ -158,11 +200,6 @@ public class RotCat : BaseUnityPlugin
                     }
                 }
             }
-        };
-
-        On.CorruptionSpore.ctor += (orig, self) =>
-        {
-            orig(self);
         };
 
         On.Player.Update += (orig, self, eu) =>
