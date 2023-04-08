@@ -162,8 +162,44 @@ public class RotCat : BaseUnityPlugin
                     something.grabWallCooldown -= 0.5f;
                 }
                 //This whole bit controls the lengthening of the tentacles when the player is standing still, or moving too much
-                Functions.TentacleRetraction(((Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) > 1f && Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) < 3.5f) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value) || Input.GetKey(staticOptions.tentMovementEnable.Value)) && something.retractionTimer < 60, something.retractionTimer > -20 && !Input.GetKey(staticOptions.tentMovementEnable.Value), something.retractionTimer <= 40 && something.retractionTimer > 0, self, something);
+                Functions.TentacleRetraction(self, something, staticOptions);
 
+                //The same, but for the decorative tentacles which have slightly different parameters to follow.
+                foreach (var tentacle in something.decorativeTentacles) {
+                    int pointer = Array.IndexOf(something.decorativeTentacles, tentacle);
+                    Vector2 direction = self.mainBodyChunk.pos - self.bodyChunks[1].pos;
+                    Vector2 dirNormalized = direction.normalized;
+                    Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
+                    foreach (Point p in tentacle.pList)
+                    {
+                        if (!p.locked && self.room != null) {
+                            Vector2 positionBeforeUpdate = p.position;
+                            p.position += (p.position - p.prevPosition) * Random.Range(0.9f,1.1f);
+                            p.position += (Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f));
+                            p.prevPosition = positionBeforeUpdate;
+                        }
+                        if (Array.IndexOf(tentacle.pList, p) == 0) {
+                            p.locked = true;
+                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
+                        }
+                        if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1) {
+                            p.locked = true;
+                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
+                        }
+                    }
+                }
+
+
+                if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {//Something is bugged when first activating this, reminder to figure out why. Needs fixing
+                    Functions.PrimTentAndPlayerMovement(something, self, staticOptions);
+                    float startPos = Functions.FindPos(something.overrideControls, self, staticOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
+                    Functions.TentaclesFindPositionToGoTo(something, self, startPos);
+                    Functions.MoveTentacleToPosition(something, self);
+                }
+                else {
+                    something.automateMovement = false;
+                }
+                
                 //Physics for the individual points and Corruption circles
                 int numIterations = 10;
                 foreach (var tentacle in something.tentacles) {
@@ -194,45 +230,10 @@ public class RotCat : BaseUnityPlugin
                         spot.position = spot.pointA.position + (dirNormalized * spot.offset.y) + (perpendicularVector * spot.offset.x);
                     }
                 }
-                //The same, but for the decorative tentacles which have slightly different parameters to follow.
-                foreach (var tentacle in something.decorativeTentacles) {
-                    int pointer = Array.IndexOf(something.decorativeTentacles, tentacle);
-                    Vector2 direction = self.mainBodyChunk.pos - self.bodyChunks[1].pos;
-                    Vector2 dirNormalized = direction.normalized;
-                    Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
-                    foreach (Point p in tentacle.pList)
-                    {
-                        if (!p.locked && self.room != null) {
-                            Vector2 positionBeforeUpdate = p.position;
-                            p.position += (p.position - p.prevPosition) * Random.Range(0.9f,1.1f);
-                            p.position += (Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f));
-                            p.prevPosition = positionBeforeUpdate;
-                        }
-                        if (Array.IndexOf(tentacle.pList, p) == 0) {
-                            p.locked = true;
-                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
-                        }
-                        if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1) {
-                            p.locked = true;
-                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
-                        }
-                    }
-                }
-
                 //Physics for the sticks of all tentacles, which affects the points
                 for (int i = 0; i < numIterations; i++) {
                     Line[][] totalTentacles = {something.tentacles, something.decorativeTentacles};
                     Functions.StickCalculations(totalTentacles);
-                }
-
-                if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {//Something is bugged when first activating this, reminder to figure out why. Needs fixing
-                    Functions.PrimTentAndPlayerMovement(something, self, staticOptions);
-                    float startPos = Functions.FindPos(something.overrideControls, self, staticOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
-                    Functions.TentaclesFindPositionToGoTo(something, self, startPos);
-                    Functions.MoveTentacleToPosition(something, self);
-                }
-                else {
-                    something.automateMovement = false;
                 }
             }
         };
@@ -311,7 +312,7 @@ public class PlayerEx
     public bool eating = false;
     public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation
         public Vector2 targetPosition = new Vector2(0,0);
-        public bool connectionTaken = false;
+        public bool newConnectionSpotFound = false;
         public bool foundSurface = false;
         public bool isPole = false;
     }
@@ -367,14 +368,21 @@ public class Functions {
             }
         }
     }
-    public static void TentacleRetraction(bool condition1, bool condition2, bool condition3, Player self, PlayerEx something) {
-        if (condition1) {//Change limits back to 1f and 4.5f once testing is done
+    public static void TentacleRetraction(Player self, PlayerEx something, RotCatOptions staticOptions) {
+        
+        if (Input.GetKey(staticOptions.tentMovementAutoEnable.Value) && something.retractionTimer < 40) {
+            something.retractionTimer += 5;
+        }
+
+        bool notTooFarNotTooClose = (Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) > 1f && Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) < 3.5f);
+
+        if ((notTooFarNotTooClose || Input.GetKey(staticOptions.tentMovementEnable.Value)) && something.retractionTimer < 60) {//Change limits back to 1f and 4.5f once testing is done
             something.retractionTimer += 0.5f;
         }
-        else if (condition2) {
+        else if (something.retractionTimer > -20 && !Input.GetKey(staticOptions.tentMovementEnable.Value)) {
             something.retractionTimer -= 0.5f;
         }
-        if (condition3) {
+        if (something.retractionTimer <= 40 && something.retractionTimer > 0) {
             foreach (var tentacle in something.tentacles) {
                 foreach (var stick in tentacle.sList)
                 {
@@ -389,15 +397,20 @@ public class Functions {
             something.automateMovement = true;
         }
         if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).AnyBeam) && !something.automateMovement) {
+            
             int upDown = (Input.GetKey(staticOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(staticOptions.tentMovementDown.Value)? -1:0);
             int rightLeft = (Input.GetKey(staticOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(staticOptions.tentMovementLeft.Value)? -1:0);
+            
             if (Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos) < 300f) {
+                
                 something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position += new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y));
             }
         }
         else {
             if (!something.automateMovement) {
                 something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
+                something.targetPos[0].foundSurface = true;
+                something.targetPos[0].newConnectionSpotFound = true;
             }
             something.automateMovement = true;
             int connectionsToSurface = 0;
@@ -410,9 +423,11 @@ public class Functions {
                 something.automateMovement = false;
                 //self.controller = new Player.NullController();
             }
+            
+            #region BocyChunkMovements
             self.mainBodyChunk.vel = new Vector2(2.3f*connectionsToSurface*self.input[0].x, 2.3f*connectionsToSurface*self.input[0].y);
-            self.airFriction = 0.75f;
-            self.customPlayerGravity = 0.25f;
+            self.airFriction = 0.55f;
+            self.customPlayerGravity = 0.2f;
             foreach (var chunk in self.bodyChunks)
             {
                 if (chunk != self.mainBodyChunk)
@@ -420,22 +435,23 @@ public class Functions {
                     //base.Logger.LogDebug(self.room.GetTile(chunk.pos + new Vector2(0,-1f)).Solid);
                     if (self.room != null && !self.room.GetTile(chunk.pos + Vector2.down).Solid)
                     {
-                        chunk.vel = Vector2.down * self.customPlayerGravity * self.room.gravity;
+                        chunk.vel = Vector2.down * self.customPlayerGravity * self.room.gravity / self.airFriction;
                     }
                     else
                     {
-                        chunk.vel = new Vector2(0,1);
+                        chunk.vel = new Vector2(0,3);
                         //chunk.pos += new Vector2(0,10);
                     }
                 }
             }
+            #endregion
         }
     }
     public static void TentaclesFindPositionToGoTo(PlayerEx something, Player self, float startPos) {
         for (int i = 0; i < something.targetPos.Length; i++) {
             if (something.targetPos[i].foundSurface && Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250) {
                 something.targetPos[i].foundSurface = false;
-                something.targetPos[i].connectionTaken = false;
+                something.targetPos[i].newConnectionSpotFound = false;
             }
             for (float k = 0; k < 200; k++) {
                 for (float j = startPos + (float)Math.PI/8*(i); j < startPos + (float)Math.PI/8*(i+1); j+=((float)Math.PI)/256f) {
@@ -463,20 +479,22 @@ public class Functions {
         for (int i = 0; i < something.tentacles.Length; i++) {
             //base.Logger.LogDebug(something.targetPos[i].isPipe);
             //base.Logger.LogDebug(Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere));
-            if (!something.targetPos[i].connectionTaken && something.automateMovement) {
-                something.targetPos[i].connectionTaken = true;
+            if (!something.targetPos[i].newConnectionSpotFound && something.automateMovement) {
+                something.targetPos[i].newConnectionSpotFound = true;
                 something.tentacles[i].iWantToGoThere = something.targetPos[i].targetPosition;
                 //self.room.AddObject(new Spark(something.tentacles[i].iWantToGoThere, new Vector2(5,5), Color.blue, null, 10, 20));  //Testing
             }
             if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 0f:5f) && something.automateMovement) {//Change value here too
                 something.tentacles[i].isAttatchedToSurface = 0;
                 Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position);
+                
                 something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tip, controls speed tentacles move to their target pos
+                
                 something.tentacles[i].canPlaySound = true;
                 //base.Logger.LogDebug(direction);
             }
-            if (self.room != null && Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) < 15f) {
-                something.tentacles[i].isAttatchedToSurface = 1;    //Casually giving the player some lenience
+            if (self.room != null && Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) < 15f) {    //Casually giving the player some lenience
+                something.tentacles[i].isAttatchedToSurface = 1;
                 if (something.tentacles[i].canPlaySound) {
                     self.room.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Grab_Terrain, something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, 1f, 1f);
                     something.tentacles[i].canPlaySound = false;

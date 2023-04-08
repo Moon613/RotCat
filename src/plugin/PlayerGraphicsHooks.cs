@@ -173,12 +173,12 @@ namespace RotCat
                 
                 //Makes tentacles and circles on them invisible if they are retracted into the scug
                 for (int i = something.initialCircleSprite; i < sLeaser.sprites.Length; i++) {
-                    if (something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite)) {
+                    if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite)) || Input.GetKey(RotCat.staticOptions.tentMovementAutoEnable.Value)) {
                         sLeaser.sprites[i].color = new Color(sLeaser.sprites[i].color.r, sLeaser.sprites[i].color.g, sLeaser.sprites[i].color.b, Mathf.Lerp(0f,1f,something.retractionTimer/10));
                     }
                 }
-
-                for (int i = something.initialBodyRotSprite; i < something.initialCircleSprite; i++) {
+                //Generates the Body Rot Bulbs, sets the scale, and colors them
+                for (int i = something.initialBodyRotSprite; i < something.initialCircleSprite; i++) {  //k is used in order to go over the rList twice, since it holds the data for the bulbs, and the bulb and X sprites are separate in order to allow for custom colors for both
                     int halfLength = ((something.initialCircleSprite - something.initialBodyRotSprite)/2) + something.initialBodyRotSprite;
                     int k = i - something.initialBodyRotSprite;
                     k -= i<halfLength? 0:halfLength-something.initialBodyRotSprite;
