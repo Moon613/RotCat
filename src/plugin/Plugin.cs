@@ -189,7 +189,6 @@ public class RotCat : BaseUnityPlugin
                     }
                 }
 
-
                 if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {//Something is bugged when first activating this, reminder to figure out why. Needs fixing
                     Functions.PrimTentAndPlayerMovement(something, self, staticOptions);
                     float startPos = Functions.FindPos(something.overrideControls, self, staticOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
@@ -199,7 +198,7 @@ public class RotCat : BaseUnityPlugin
                 else {
                     something.automateMovement = false;
                 }
-                
+
                 //Physics for the individual points and Corruption circles
                 int numIterations = 10;
                 foreach (var tentacle in something.tentacles) {
