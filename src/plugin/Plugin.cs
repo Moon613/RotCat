@@ -189,8 +189,8 @@ public class RotCat : BaseUnityPlugin
                     }
                 }
 
-                if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {//Something is bugged when first activating this, reminder to figure out why. Needs fixing
-                    Functions.PrimTentAndPlayerMovement(something, self, staticOptions);
+                if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {
+                    Functions.PrimaryTentacleAndPlayerMovement(something, self, staticOptions);
                     float startPos = Functions.FindPos(something.overrideControls, self, staticOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
                     Functions.TentaclesFindPositionToGoTo(something, self, startPos);
                     Functions.MoveTentacleToPosition(something, self);
@@ -391,7 +391,7 @@ public class Functions {
         }
         something.previousPosition = self.mainBodyChunk.pos;
     }
-    public static void PrimTentAndPlayerMovement(PlayerEx something, Player self, RotCatOptions staticOptions) {
+    public static void PrimaryTentacleAndPlayerMovement(PlayerEx something, Player self, RotCatOptions staticOptions) {
         if (Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {
             something.automateMovement = true;
         }
