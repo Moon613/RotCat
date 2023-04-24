@@ -55,15 +55,6 @@ public class RotCat : BaseUnityPlugin
                 something.isRot = true;
             }
             if (something.isRot) {
-                var playerNumber = !self.room.game.IsArenaSession && self.playerState.playerNumber == 0 ? -1 : self.playerState.playerNumber;
-                if (ExtEnumBase.TryParse(typeof(SlugcatStats.Name), "slugrot", true, out var extEnum))
-                {
-                    Name = extEnum as SlugcatStats.Name;
-                }
-                SlugBaseCharacter.TryGet(Name, out Character);
-                if (Character.Features.TryGet(PlayerFeatures.CustomColors, out var customColors)) {
-                    something.rotEyeColor = customColors[2].GetColor(playerNumber);
-                }
                 self.abstractCreature.tentacleImmune = true;
                 something.totalCircleSprites = something.circleAmmount * 4;
                 something.tentacleOne = new Line();
@@ -483,11 +474,11 @@ public class Functions {
                 something.tentacles[i].iWantToGoThere = something.targetPos[i].targetPosition;
                 //self.room.AddObject(new Spark(something.tentacles[i].iWantToGoThere, new Vector2(5,5), Color.blue, null, 10, 20));  //Testing
             }
-            if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 0f:5f) && something.automateMovement) {//Change value here too
+            if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 0f:5f) && something.automateMovement) {
                 something.tentacles[i].isAttatchedToSurface = 0;
                 Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position);
                 
-                something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tip, controls speed tentacles move to their target pos
+                something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tentacle Tip, controls speed tentacles move to their target pos
                 
                 something.tentacles[i].canPlaySound = true;
                 //base.Logger.LogDebug(direction);
@@ -528,96 +519,86 @@ public class Functions {
         }
     }
     public static void DrawTentacleCircles(PlayerEx something, Vector2 camPos, FSprite[] tentacle1Circles, FSprite[] tentacle2Circles, FSprite[] tentacle3Circles, FSprite[] tentacle4Circles) {
-                //Set the circle positions on the tentacles and color them
-                for (int i = 0; i < something.tentacles.Length; i++) {
-                    for (int j = 0; j < something.tentacles[i].cList.Length; j++) {
-                        //base.Logger.LogDebug("Drawsprites");
-                        //base.Logger.LogDebug(something.tentacles[i].cList[j].position);
-                        if (i == 0) {
-                            Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
-                            bool rotationSide = vector.x < 0;
-                            tentacle1Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
-                            if (something.tentacles[i].cList[j].brightBackground) {
-                                tentacle1Circles[j].color = new Color((float)27/255, (float)11/255, (float)253/255);
-                            }
-                            else {
-                                if (something.tentacles[i].cList[j].darkBackground) {
-                                    tentacle1Circles[j].color = new Color((float)27/255, (float)11/255, (float)55/255);
-                                }
-                                else {
-                                    tentacle1Circles[j].color = new Color((float)27/255, (float)11/255, (float)153/255);
-                                }
-                            }
-                            tentacle1Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f) + something.tentacles[i].cList[j].rotation;
-                            if (something.tentacles[i].cList[j].grayscale) {
-                                tentacle1Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
-                            }
-                        }
-                        if (i == 1) {
-                            Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
-                            bool rotationSide = vector.x < 0;
-                            tentacle2Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
-                            //self.player.room.AddObject(new Spark(tentacle2Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                            if (something.tentacles[i].cList[j].brightBackground) {
-                                tentacle2Circles[j].color = new Color((float)27/255, (float)11/255, (float)253/255);
-                            }
-                            else {
-                                if (something.tentacles[i].cList[j].darkBackground) {
-                                    tentacle2Circles[j].color = new Color((float)27/255, (float)11/255, (float)55/255);
-                                }
-                                else {
-                                    tentacle2Circles[j].color = new Color((float)27/255, (float)11/255, (float)153/255);
-                                }
-                            }
-                            tentacle2Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
-                            if (something.tentacles[i].cList[j].grayscale) {
-                                tentacle2Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
-                            }
-                        }
-                        if (i == 2) {
-                            Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
-                            bool rotationSide = vector.x < 0;
-                            tentacle3Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
-                            //self.player.room.AddObject(new Spark(tentacle3Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                            if (something.tentacles[i].cList[j].brightBackground) {
-                                tentacle3Circles[j].color = new Color((float)27/255, (float)11/255, (float)253/255);
-                            }
-                            else {
-                                if (something.tentacles[i].cList[j].darkBackground) {
-                                    tentacle3Circles[j].color = new Color((float)27/255, (float)11/255, (float)55/255);
-                                }
-                                else {
-                                    tentacle3Circles[j].color = new Color((float)27/255, (float)11/255, (float)153/255);
-                                }
-                            }
-                            tentacle3Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
-                            if (something.tentacles[i].cList[j].grayscale) {
-                                tentacle3Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
-                            }
-                        }
-                        if (i == 3) {
-                            Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
-                            bool rotationSide = vector.x < 0;
-                            tentacle4Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
-                            //self.player.room.AddObject(new Spark(tentacle4Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                            if (something.tentacles[i].cList[j].brightBackground) {
-                                tentacle4Circles[j].color = new Color((float)27/255, (float)11/255, (float)253/255);
-                            }
-                            else {
-                                if (something.tentacles[i].cList[j].darkBackground) {
-                                    tentacle4Circles[j].color = new Color((float)27/255, (float)11/255, (float)55/255);
-                                }
-                                else {
-                                    tentacle4Circles[j].color = new Color((float)27/255, (float)11/255, (float)153/255);
-                                }
-                            }
-                            tentacle4Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
-                            if (something.tentacles[i].cList[j].grayscale) {
-                                tentacle4Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
-                            }
-                        }
+        //Set the circle positions on the tentacles and color them
+        for (int i = 0; i < something.tentacles.Length; i++) {
+            for (int j = 0; j < something.tentacles[i].cList.Length; j++) {
+                //base.Logger.LogDebug("Drawsprites");
+                //base.Logger.LogDebug(something.tentacles[i].cList[j].position);
+                if (i == 0) {
+                    Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                    bool rotationSide = vector.x < 0;
+                    tentacle1Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
+                    tentacle1Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                    tentacle1Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f) + something.tentacles[i].cList[j].rotation;
+                    if (something.tentacles[i].cList[j].grayscale) {
+                        tentacle1Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
                     }
                 }
+                if (i == 1) {
+                    Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                    bool rotationSide = vector.x < 0;
+                    tentacle2Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
+                    //self.player.room.AddObject(new Spark(tentacle2Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
+                    tentacle2Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                    tentacle2Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
+                    if (something.tentacles[i].cList[j].grayscale) {
+                        tentacle2Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
+                    }
+                }
+                if (i == 2) {
+                    Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                    bool rotationSide = vector.x < 0;
+                    tentacle3Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
+                    //self.player.room.AddObject(new Spark(tentacle3Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
+                    tentacle3Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                    tentacle3Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
+                    if (something.tentacles[i].cList[j].grayscale) {
+                        tentacle3Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
+                    }
+                }
+                if (i == 3) {
+                    Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                    bool rotationSide = vector.x < 0;
+                    tentacle4Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
+                    //self.player.room.AddObject(new Spark(tentacle4Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
+                    tentacle4Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                    tentacle4Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
+                    if (something.tentacles[i].cList[j].grayscale) {
+                        tentacle4Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
+                    }
+                }
+            }
+        }
+    }
+    private static Color GetColor(Color rotEyeColor, bool brightBackground, bool darkBackground) {
+        float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
+        if (brightBackground) {
+            return rotEyeColor; //Default value: 27/255, 11/255, 253/255
+        }
+        else if (darkBackground) {
+            if (r > g && r > b) {
+                r /= 5f;
+            }
+            else if (g > r && g > b) {
+                g /= 5f;
+            }
+            else if (b > r && b > g) {
+                b /= 5f;
+            }
+            return new Color(r, g, b); //new Color((float)27/255, (float)11/255, (float)55/255);
+        }
+        else {
+            if (r > g && r > b) {
+                r /= 1.64f;
+            }
+            else if (g > r && g > b) {
+                g /= 1.64f;
+            }
+            else if (b > r && b > g) {
+                b /= 1.64f;
+            }
+            return new Color(r, g, b); //new Color((float)27/255, (float)11/255, (float)153/255);
+        }
     }
 }
 

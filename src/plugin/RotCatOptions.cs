@@ -47,7 +47,7 @@ public class RotCatOptions : OptionInterface {
             new OpLabel(50f, 345f, "Activate the tentacle movement", false),
             new OpKeyBinder(tentMovementEnable, new Vector2(250f, 340f), new Vector2(100f, 30f)) {description = "Enable movement via tentacles"},
             new OpLabel(50f, 310f, "Activate automatic tentacle movement", false),
-            new OpKeyBinder(tentMovementAutoEnable, new Vector2(250f, 305f), new Vector2(100f, 30f)) {description = "Activte tentacles without choosing an initial surface"}
+            new OpKeyBinder(tentMovementAutoEnable, new Vector2(250f, 305f), new Vector2(100f, 30f)) {description = "Activte tentacles without choosing an initial surface"},
            
         };
         opTab.AddItems(UIArrPlayerOptions);

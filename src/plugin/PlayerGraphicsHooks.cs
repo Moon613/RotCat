@@ -22,6 +22,10 @@ namespace RotCat
             //base.Logger.LogDebug(sLeaser.sprites.Length);
             RotCat.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
+                something.rotEyeColor = new Color((float)27/255, (float)11/255, (float)253/255);
+                if (PlayerGraphics.CustomColorsEnabled()) {
+                    something.rotEyeColor = PlayerGraphics.CustomColorSafety(2);
+                }
                 something.faceAtlas = Futile.atlasManager.LoadAtlas("atlases/RotFace");
                 Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2 /*Multiply by 2 for the X sprites for each one*/));
                 something.initialBodyRotSprite = sLeaser.sprites.Length - (something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2));
@@ -104,11 +108,29 @@ namespace RotCat
                 }
                 Functions.DrawTentacleCircles(something, camPos, tentacle1Circles, tentacle2Circles, tentacle3Circles, tentacle4Circles);
                 
-                //Colors all additional leg sprites DLL leg color
+                //Colors all additional leg sprites DLL leg color, or the custom color chosen
+                Color initialColor = PlayerGraphics.CustomColorSafety(0);
+                Color rotEyeColor = something.rotEyeColor;
+                float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
+
                 for (int i = something.initialLegSprite; i < sLeaser.sprites.Length; i++)
                 {
                     for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
-                        (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = new Color((float)27/255, (float)11/255, j>70? (float)(33+(4*(j-70)))/255 : (float)33/255);  //Add a Mathf.Lerp here so custom colors are easier later.
+                        if (j <= 70) {
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = initialColor;
+                        }
+                        else if (j > 70) {
+                            if (r > g && r > b) {
+                                r = (float)(33+(4*(j-70)))/255;
+                            }
+                            else if (g > r && g > b) {
+                                g = (float)(33+(4*(j-70)))/255;
+                            }
+                            else if (b > r && b > g) {
+                                b = (float)(33+(4*(j-70)))/255;
+                            }
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = new Color(r, g, b);
+                        }
                     }
                 }
                 
@@ -124,23 +146,23 @@ namespace RotCat
                 {
                     Vector2 vector = Vector2.Lerp(tentacle.pList[0].prevPosition, tentacle.pList[0].position, timeStacker);
                     vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].prevPosition, tentacle.pList[1].position, timeStacker), vector);
-                    float d = 2.3f;//width
+                    float width = 2.3f;//width
                     for (int i = 0; i < tentacle.pList.Length; i++)
                     {
                         Vector2 vector2 = tentacle.pList[i].position;
-                        Vector2 a = Custom.PerpendicularVector((vector - vector2).normalized);
+                        Vector2 perpendicularVector = Custom.PerpendicularVector((vector - vector2).normalized);
                         //base.Logger.LogDebug(vector + " " + vector2);
                         if (i == 0)
                         {
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, self.player.mainBodyChunk.pos - a * d - camPos);
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + a * d - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, self.player.mainBodyChunk.pos - perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + perpendicularVector * width - camPos);
                         }
-                        else{
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, vector - a * d - camPos);
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, vector + a * d - camPos);
+                        else {
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, vector - perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, vector + perpendicularVector * width - camPos);
                         }
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 - a * d - camPos);
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + a * d - camPos);
+                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 - perpendicularVector * width - camPos);
+                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + perpendicularVector * width - camPos);
                         vector = vector2;
                     }
                     nextTentacleSprite += 1;
@@ -191,7 +213,7 @@ namespace RotCat
                     sLeaser.sprites[i].SetPosition(something.rList[k].chunk1.GetPosition() + (vecNormalized * something.rList[k].offset.y) + (perpendicularVector * something.rList[k].offset.x));
                     sLeaser.sprites[i].scale = something.rList[k].scale;
                     if (k < i - something.initialBodyRotSprite) {
-                        sLeaser.sprites[i].color = new Color((float)27/255, (float)11/255, (float)253/255);
+                        sLeaser.sprites[i].color = something.rotEyeColor;
                     }
                     //sLeaser.sprites[i].color = something.rotEyeColor;
                 }

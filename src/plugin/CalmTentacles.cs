@@ -25,6 +25,9 @@ namespace RotCat
                     for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {
                         something.tentacles[i].pList[j].position = self.mainBodyChunk.pos - new Vector2(0,j);
                         something.tentacles[i].pList[j].prevPosition = self.mainBodyChunk.pos - new Vector2(0,j);
+                        something.targetPos[i].foundSurface = false;
+                        Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
+                        something.targetPos[i].targetPosition = self.mainBodyChunk.pos;
                     }
                 }
             }
@@ -37,6 +40,9 @@ namespace RotCat
                     for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {
                         something.tentacles[i].pList[j].position = self.mainBodyChunk.pos - new Vector2(0,j);
                         something.tentacles[i].pList[j].prevPosition = self.mainBodyChunk.pos - new Vector2(0,j);
+                        something.targetPos[i].foundSurface = false;
+                        Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
+                        something.targetPos[i].targetPosition = self.mainBodyChunk.pos;
                     }
                 }
             }
