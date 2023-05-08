@@ -1,17 +1,4 @@
-using BepInEx;
-using UnityEngine;
-using Noise;
 using MoreSlugcats;
-using RWCustom;
-using System.Security;
-using System.Security.Permissions;
-using System;
-using System.Text.RegularExpressions;
-using System.Runtime.CompilerServices;
-using System.Collections.Generic;
-using Random = UnityEngine.Random;
-using SlugBase.Features;
-using SlugBase;
 
 namespace RotCat
 {
@@ -28,7 +15,7 @@ namespace RotCat
                 RotCat.tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
                 if (something.isRot && self.Template.type != MoreSlugcatsEnums.CreatureTemplateType.TerrorLongLegs) {
                     for(int j = 0; j < self?.grasps?.Length; j++) {
-                        if (self?.grasps[j] != null && self?.grasps[j].grabbedChunk.owner == self.room.PlayersInRoom[i]) {
+                        if (self?.grasps[j] != null && self?.grasps[j].grabbedChunk.owner is Player) {
                             self.grasps[j] = null;
                         }
                     }
@@ -41,7 +28,7 @@ namespace RotCat
             for(int i = 0; i < self?.room?.PlayersInRoom?.Count; i++) {
                 RotCat.tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var something);
                 if (something.isRot) {
-                    if(self?.grabChunk?.owner?.GetType() == typeof(Player)) {
+                    if(self?.grabChunk?.owner is Player) {
                         self.grabChunk = null;
                     }
                 }

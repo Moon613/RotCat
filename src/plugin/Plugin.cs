@@ -12,6 +12,10 @@ using System.Collections.Generic;
 using Random = UnityEngine.Random;
 using SlugBase.Features;
 using SlugBase;
+using System.IO;
+using Menu;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -22,12 +26,14 @@ namespace RotCat;
 public class RotCat : BaseUnityPlugin
 {
     bool init = false;
+    public static FContainer darkContainer = new FContainer();
+    public static FSprite? vignetteEffect;
     public static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new();
-    public RotCatOptions Options;
-    public static RotCatOptions staticOptions;
+    public static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new();
+    public static bool appliedVignette = false;
+    public static RotCatOptions RotOptions;
     bool configWorking = false;
-    public SlugcatStats.Name Name;
-    public SlugBaseCharacter Character;
+    public int timer = 0;
     public void OnEnable()
     {
         On.RainWorld.OnModsInit += Init;
@@ -45,6 +51,27 @@ public class RotCat : BaseUnityPlugin
         On.PlayerGraphics.DrawSprites += PlayerGraphicsHooks.RotDrawSprites;
 
         On.Player.SpitOutOfShortCut += CalmTentacles.CalmSpitOutOfShortCut;
+
+        On.GameSession.ctor += Vignette.GameSessionStartup;
+
+        On.RainWorldGame.ExitToMenu += Vignette.QuitModeBackToMenu;
+
+        On.Room.InGameNoise += Vignette.CystsReacts;
+
+        On.Creature.SuckedIntoShortCut += Vignette.RotCatSuckIntoShortcut;
+
+        On.Creature.SpitOutOfShortCut += Vignette.RotCatSpitOutOfShortcut;
+
+        On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += Vignette.LocateSmallSounds;
+
+        On.Menu.SleepAndDeathScreen.ctor += Vignette.CleanDarkContainerOnSleepAndDeathScreen;
+
+        On.Spark.AddToContainer += (orig, self, sLeaser, rCam, newContainer) => {
+            if (sparkLayering.TryGetValue(self, out SparkEx spark) && spark.isHearingSpark) {
+                newContainer = darkContainer;
+            }
+            orig(self, sLeaser, rCam, newContainer);
+        };
 
         On.Player.ctor += (orig, self, abstractCreature, world) =>
         {
@@ -82,7 +109,7 @@ public class RotCat : BaseUnityPlugin
                 foreach (var tentacle in something.tentacles) {
                     tentacle.pList = new Point[something.segments];
                     for (int i = 0; i < something.segments; i++) {
-                        tentacle.pList[i] = new Point(new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0?true:false);
+                        tentacle.pList[i] = new Point(new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0);
                         tentacle.pList[i].prevPosition = new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-i);
                     }
                     tentacle.sList = new Stick[something.segments-1];
@@ -129,7 +156,7 @@ public class RotCat : BaseUnityPlugin
             }
         };
 
-        On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
+        /*On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
             orig(self, graspIndex);
             tenticleStuff.TryGetValue(self, out var something);
             Creature creature;
@@ -140,7 +167,7 @@ public class RotCat : BaseUnityPlugin
                 Vector2 normalVector = vector.normalized;
                 Vector2 perpVector = Custom.PerpendicularVector(normalVector);
             }
-        };
+        };*/
 
         On.Player.Update += (orig, self, eu) =>
         {
@@ -148,12 +175,18 @@ public class RotCat : BaseUnityPlugin
             tenticleStuff.TryGetValue(self, out var something);
             if (something.isRot && self != null) {
                 self.scavengerImmunity = 9999;  //Might want to add a system that calculates this based on rep, since you should be able to become friends if you want
-                something.overrideControls = Input.GetKey(staticOptions.tentMovementLeft.Value) || Input.GetKey(staticOptions.tentMovementRight.Value) || Input.GetKey(staticOptions.tentMovementDown.Value) || Input.GetKey(staticOptions.tentMovementUp.Value);
-                if (something.grabWallCooldown > 0) { //Doesn't do anything right now, need to get it to play nice with the logic first
+                something.overrideControls = Input.GetKey(RotOptions.tentMovementLeft.Value) || Input.GetKey(RotOptions.tentMovementRight.Value) || Input.GetKey(RotOptions.tentMovementDown.Value) || Input.GetKey(RotOptions.tentMovementUp.Value);
+                if (something.grabWallCooldown > 0) { //Doesn't do anything right now, need to get it to play nice with the logic first     //New note, this will probably go unused.
                     something.grabWallCooldown -= 0.5f;
                 }
+                if (something.hearingCooldown > 0) {
+                    something.hearingCooldown--;
+                }
+                if (something.smolHearingCooldown > 0) {
+                    something.smolHearingCooldown--;
+                }
                 //This whole bit controls the lengthening of the tentacles when the player is standing still, or moving too much
-                Functions.TentacleRetraction(self, something, staticOptions);
+                Functions.TentacleRetraction(self, something, RotOptions);
 
                 //The same, but for the decorative tentacles which have slightly different parameters to follow.
                 foreach (var tentacle in something.decorativeTentacles) {
@@ -180,9 +213,9 @@ public class RotCat : BaseUnityPlugin
                     }
                 }
 
-                if (Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {
-                    Functions.PrimaryTentacleAndPlayerMovement(something, self, staticOptions);
-                    float startPos = Functions.FindPos(something.overrideControls, self, staticOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
+                if (Input.GetKey(RotOptions.tentMovementEnable.Value) || Input.GetKey(RotOptions.tentMovementAutoEnable.Value)) {
+                    Functions.PrimaryTentacleAndPlayerMovement(something, self, RotOptions);
+                    float startPos = Functions.FindPos(something.overrideControls, self, RotOptions);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
                     Functions.TentaclesFindPositionToGoTo(something, self, startPos);
                     Functions.MoveTentacleToPosition(something, self);
                 }
@@ -190,34 +223,17 @@ public class RotCat : BaseUnityPlugin
                     something.automateMovement = false;
                 }
 
-                //Physics for the individual points and Corruption circles
+                //Physics for the individual points and Rot Bulbs
                 int numIterations = 10;
                 foreach (var tentacle in something.tentacles) {
                     foreach (Point p in tentacle.pList)
                     {
-                        if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1 && ((Input.GetKey(staticOptions.tentMovementEnable.Value) || Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) && something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
-                            p.locked = true;
-                        }
-                        else {
-                            p.locked = false;
-                        }
-                        if (!p.locked && self.room != null) {
-                            Vector2 positionBeforeUpdate = p.position;
-                            p.position += (p.position - p.prevPosition) * Random.Range(0.9f,1.1f);
-                            p.position += Vector2.down * self.room.gravity * Random.Range(0.15f,0.3f);
-                            p.prevPosition = positionBeforeUpdate;
-                        }
-                        if (Array.IndexOf(tentacle.pList, p) == 0) {
-                            p.position = self.mainBodyChunk.pos;
-                        }
+                        p.Update(something, self, RotOptions, tentacle);
                     }
                 
                     //base.Logger.LogDebug("Offset here");
                     foreach (Circle spot in tentacle.cList) {
-                        Vector2 direction = spot.pointB.position - spot.pointA.position;
-                        Vector2 dirNormalized = direction.normalized;
-                        Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
-                        spot.position = spot.pointA.position + (dirNormalized * spot.offset.y) + (perpendicularVector * spot.offset.x);
+                        spot.Update();
                     }
                 }
                 //Physics for the sticks of all tentacles, which affects the points
@@ -228,6 +244,7 @@ public class RotCat : BaseUnityPlugin
             }
         };
 
+        #region Don't Mind this lol
         /*On.RoomCamera.ctor += (orig, self, game, cameraNumber) => {   //Leftover from when I was doing a slight amount of trolling :3
             orig(self, game, cameraNumber);
             FSprite replacementBackground = new FSprite("bgreplace", false);
@@ -243,7 +260,72 @@ public class RotCat : BaseUnityPlugin
             self.ReturnFContainer("Shadows").AddChild(replacementBackground);
             replacementBackground.MoveToBack();
         };*/
+        /*On.RoomCamera.ApplyPositionChange += (orig, self) => {
+            orig(self);
+            Texture2D newTexture = new Texture2D(400, 225, TextureFormat.ARGB32, false);
+            var filePath = AssetManager.ResolveFilePath("textures/thumbnail.png");
+            if(File.Exists(filePath)) {
+                var rawData = File.ReadAllBytes(filePath);
+                newTexture.LoadImage(rawData);
+                Debug.Log(self.bkgwww + " " + newTexture);
+                self.bkgwww.LoadImageIntoTexture(newTexture);
+            }
+            else {
+                Debug.Log("File path " + filePath + " does not exist!");
+            }
+        };*/
+        /*On.RoomCamera.Update += (orig, self) => {
+            orig(self);
+            backgroundAtlas._elementsByName.TryGetValue("lightgrayscalesprite", out var element);
+            Debug.Log(element.name);
+            self.backgroundGraphic.element = element;
+            self.backgroundGraphic.color = Color.white;
+            self.backgroundGraphic.shader = self.game.rainWorld.Shaders["Basic"];
+            self.backgroundGraphic.scale = 80f;
+            self.backgroundGraphic.SetPosition(20, 20);
+        };*/
+        /*On.RoomCamera.Update += (orig, self) => {
+            orig(self);
+            //self.backgroundGraphic.SetAnchor(-0.4f, -0.2f);
+            if (self.bkgwww != null) {
+                self.bkgwww.Dispose();
+                self.bkgwww = null;
+            }
+            string filePath = AssetManager.ResolveFilePath("textures/blank.png");
+            self.bkgwww = new WWW(filePath);
+
+
+            int updatePerFrame = 5;
+            int amountOfFrames = 7;
+            string frame = "frame" + (timer/updatePerFrame).ToString();
+            Debug.Log(frame);
+            self.backgroundGraphic.SetElementByName(frame);
+            Debug.Log(self.backgroundGraphic.GetAnchor());
+            Debug.Log("timer is: " + timer);
+            timer++;
+            if (timer>(amountOfFrames*updatePerFrame)-1) {
+                timer = 0;
+                Debug.Log("Reset timer");
+            }
+        };*/
+        /*On.RoomCamera.Update += (orig, self) => {
+            orig(self);
+            int updatePerFrame = 5;
+            int amountOfFrames = 7;
+            string text = AssetManager.ResolveFilePath("textures/frame"+timer+".png");
+            if (File.Exists(text) && self.www == null && self.quenedTexture != text) {
+                self.www = new WWW(text);
+                self.applyPosChangeWhenTextureIsLoaded = true;
+            }
+            timer++;
+            if (timer>(amountOfFrames*updatePerFrame)-1) {
+                timer = 0;
+                Debug.Log("Reset timer");
+            }
+        };*/
+        #endregion
     }
+    
     private void Init(On.RainWorld.orig_OnModsInit orig, RainWorld self) {
         orig(self);
 
@@ -251,17 +333,18 @@ public class RotCat : BaseUnityPlugin
             init = true;
             try {
                 //AssetManager.ResolveFilePath("atlases/mane.png");
+                //Futile.atlasManager.LoadAtlas("textures/beecatboing");
                 Futile.atlasManager.LoadAtlas("atlases/lightgrayscalesprite");
                 Futile.atlasManager.LoadAtlas("atlases/grayscalesprite");
                 Futile.atlasManager.LoadAtlas("atlases/roteyeeye");
-                Futile.atlasManager.LoadAtlas("atlases/roteye");
+                Futile.atlasManager.LoadAtlas("atlases/vignette");
                 Futile.atlasManager.LoadAtlas("atlases/RotFace");
+                Futile.atlasManager.LoadAtlas("atlases/roteye");
                 //Futile.atlasManager.LoadAtlas("atlases/body");
                 //Futile.atlasManager.LoadAtlas("atlases/mane");
                 //Futile.atlasManager.LoadAtlas("atlases/bgreplace");
-                this.Options = new RotCatOptions(this, Logger);
-                staticOptions = this.Options;
-                MachineConnector.SetRegisteredOI("rotcat", Options);
+                RotOptions = new RotCatOptions(this, Logger);
+                MachineConnector.SetRegisteredOI("rotcat", RotOptions);
                 configWorking = true;
             } catch (Exception err) {
                 base.Logger.LogError(err);
@@ -270,7 +353,6 @@ public class RotCat : BaseUnityPlugin
         }
     }
 }
-
 public class PlayerEx
 {
     public Line tentacleOne;    //These honestly don't need to be here, since they are immediantly grouped into the tentacles array
@@ -300,6 +382,9 @@ public class PlayerEx
     public Color rotEyeColor;   //Should store and control the color of the X sprites from the slugbase custom color
     public FAtlas faceAtlas;
     public bool eating = false;
+    public float timer = 0f;
+    public int hearingCooldown = 0;
+    public int smolHearingCooldown = 0;
     public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation
         public Vector2 targetPosition = new Vector2(0,0);
         public bool newConnectionSpotFound = false;
@@ -348,28 +433,23 @@ public class Functions {
         foreach (Line[] tentacleList in totalTentacles) {
             foreach (Line tentacle in tentacleList) {
                 foreach (Stick stick in tentacle.sList) {
-                    Vector2 stickCenter = (stick.pointA.position + stick.pointB.position)/2;
-                    Vector2 stickDir = (stick.pointA.position - stick.pointB.position).normalized;
-                    if (!stick.pointA.locked)
-                        stick.pointA.position = stickCenter + stickDir * stick.length / 2;
-                    if (!stick.pointB.locked)
-                        stick.pointB.position = stickCenter - stickDir * stick.length / 2;
+                    stick.Update();
                 }
             }
         }
     }
-    public static void TentacleRetraction(Player self, PlayerEx something, RotCatOptions staticOptions) {
+    public static void TentacleRetraction(Player self, PlayerEx something, RotCatOptions RotOptions) {
         
-        if (Input.GetKey(staticOptions.tentMovementAutoEnable.Value) && something.retractionTimer < 40) {
+        if (Input.GetKey(RotOptions.tentMovementAutoEnable.Value) && something.retractionTimer < 40) {
             something.retractionTimer += 5;
         }
 
         bool notTooFarNotTooClose = (Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) > 1f && Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) < 3.5f);
 
-        if ((notTooFarNotTooClose || Input.GetKey(staticOptions.tentMovementEnable.Value)) && something.retractionTimer < 60) {//Change limits back to 1f and 4.5f once testing is done
+        if ((notTooFarNotTooClose || Input.GetKey(RotOptions.tentMovementEnable.Value)) && something.retractionTimer < 60) {//Change limits back to 1f and 4.5f once testing is done
             something.retractionTimer += 0.5f;
         }
-        else if (something.retractionTimer > -20 && !Input.GetKey(staticOptions.tentMovementEnable.Value)) {
+        else if (something.retractionTimer > -20 && !Input.GetKey(RotOptions.tentMovementEnable.Value)) {
             something.retractionTimer -= 0.5f;
         }
         if (something.retractionTimer <= 40 && something.retractionTimer > 0) {
@@ -382,14 +462,14 @@ public class Functions {
         }
         something.previousPosition = self.mainBodyChunk.pos;
     }
-    public static void PrimaryTentacleAndPlayerMovement(PlayerEx something, Player self, RotCatOptions staticOptions) {
-        if (Input.GetKey(staticOptions.tentMovementAutoEnable.Value)) {
+    public static void PrimaryTentacleAndPlayerMovement(PlayerEx something, Player self, RotCatOptions RotOptions) {
+        if (Input.GetKey(RotOptions.tentMovementAutoEnable.Value) && !Input.GetKey(RotOptions.tentMovementEnable.Value)) {
             something.automateMovement = true;
         }
         if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).AnyBeam) && !something.automateMovement) {
             
-            int upDown = (Input.GetKey(staticOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(staticOptions.tentMovementDown.Value)? -1:0);
-            int rightLeft = (Input.GetKey(staticOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(staticOptions.tentMovementLeft.Value)? -1:0);
+            int upDown = (Input.GetKey(RotOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(RotOptions.tentMovementDown.Value)? -1:0);
+            int rightLeft = (Input.GetKey(RotOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(RotOptions.tentMovementLeft.Value)? -1:0);
             
             if (Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos) < 300f) {
                 
@@ -397,40 +477,56 @@ public class Functions {
             }
         }
         else {
-            if (!something.automateMovement) {
+            //self.canJump = 0;
+            //self.wantToJump = 0;
+            self.airFriction = 0.85f;
+            self.customPlayerGravity = 0.2f;
+            if (self.feetStuckPos != null)  //Stop feet from magneting to the ground
+                self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
+            if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
                 something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
                 something.targetPos[0].foundSurface = true;
                 something.targetPos[0].newConnectionSpotFound = true;
             }
             something.automateMovement = true;
-            int connectionsToSurface = 0;
+            int connectionsToSurface = 0;   //Get how many tentacles are attatched to the terrain/poles
             foreach (var tentacle in something.tentacles) {
                 if (tentacle.isAttatchedToSurface == 1) {
                     connectionsToSurface += 1;
                 }
             }
-            if (connectionsToSurface == 0 && !(Input.GetKey(staticOptions.tentMovementAutoEnable.Value))) {
+            if (connectionsToSurface == 0 && !(Input.GetKey(RotOptions.tentMovementAutoEnable.Value))) {
                 something.automateMovement = false;
                 //self.controller = new Player.NullController();
             }
             
-            #region BocyChunkMovements
-            self.mainBodyChunk.vel = new Vector2(2.3f*connectionsToSurface*self.input[0].x, 2.3f*connectionsToSurface*self.input[0].y);
-            self.airFriction = 0.55f;
-            self.customPlayerGravity = 0.2f;
-            foreach (var chunk in self.bodyChunks)
-            {
-                if (chunk != self.mainBodyChunk)
+            #region BodyChunkMovements
+            Debug.Log(something.timer);
+            if (connectionsToSurface == 0 && Input.GetKey(RotOptions.tentMovementAutoEnable.Value) && !Input.GetKey(RotOptions.tentMovementEnable.Value)) {
+                self.customPlayerGravity = 0f;
+                self.mainBodyChunk.vel -= new Vector2(0f, 0.1f);
+            }
+            else if (!Input.GetKey(RotOptions.tentMovementAutoEnable.Value) || Input.GetKey(RotOptions.tentMovementEnable.Value)) {
+                if (self.input[0].x != 0 || self.input[0].y != 0 && something.timer < 1f) {
+                    something.timer += 0.1f;
+                }
+                else if (something.timer > 0f) {
+                    something.timer -= 0.1f;
+                }
+                self.mainBodyChunk.vel = Vector2.Lerp(new Vector2(0,0.86f), new Vector2(2.3f*connectionsToSurface*self.input[0].x, 2.3f*connectionsToSurface*self.input[0].y), something.timer);
+                foreach (var chunk in self.bodyChunks)
                 {
-                    //base.Logger.LogDebug(self.room.GetTile(chunk.pos + new Vector2(0,-1f)).Solid);
-                    if (self.room != null && !self.room.GetTile(chunk.pos + Vector2.down).Solid)
+                    if (chunk != self.mainBodyChunk)
                     {
-                        chunk.vel = Vector2.down * self.customPlayerGravity * self.room.gravity / self.airFriction;
-                    }
-                    else
-                    {
-                        chunk.vel = new Vector2(0,3);
-                        //chunk.pos += new Vector2(0,10);
+                        //base.Logger.LogDebug(self.room.GetTile(chunk.pos + new Vector2(0,-1f)).Solid);
+                        if (self.room != null && !self.room.GetTile(chunk.pos + Vector2.down).Solid)
+                        {
+                            chunk.vel = Vector2.down * self.customPlayerGravity * self.room.gravity / self.airFriction;
+                        }
+                        else
+                        {
+                            chunk.vel = new Vector2(0, 0.88f);
+                        }
                     }
                 }
             }
@@ -439,7 +535,7 @@ public class Functions {
     }
     public static void TentaclesFindPositionToGoTo(PlayerEx something, Player self, float startPos) {
         for (int i = 0; i < something.targetPos.Length; i++) {
-            if (something.targetPos[i].foundSurface && Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250) {
+            if (something.targetPos[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250)) {
                 something.targetPos[i].foundSurface = false;
                 something.targetPos[i].newConnectionSpotFound = false;
             }
@@ -451,7 +547,8 @@ public class Functions {
                         }
                         else {
                             something.targetPos[i].isPole = false;
-                        }
+                        }   //These two are technically the same I think
+                        //something.targetPos[i].isPole = (self.room.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y)).AnyBeam);
                         something.targetPos[i].targetPosition = new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y) + (something.targetPos[i].isPole? (new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y)-self.mainBodyChunk.pos).normalized * 5 : new Vector2(0,0));
                         something.targetPos[i].foundSurface = true;
                     }
@@ -570,7 +667,13 @@ public class Functions {
             }
         }
     }
-    private static Color GetColor(Color rotEyeColor, bool brightBackground, bool darkBackground) {
+    public static void UpdateVignette(RainWorld game, Player self, Color col, float vignetteRad, Vector2 camPos) {
+        float rVar = (self.mainBodyChunk.pos.x-camPos.x)/game.screenSize.x;
+        float gVar = (self.mainBodyChunk.pos.y-camPos.y)/game.screenSize.y;
+        RotCat.vignetteEffect.color = new Color(rVar, gVar, col.b, vignetteRad);
+        //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
+    }
+    public static Color GetColor(Color rotEyeColor, bool brightBackground, bool darkBackground) {
         float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
         if (brightBackground) {
             return rotEyeColor; //Default value: 27/255, 11/255, 253/255
@@ -601,6 +704,12 @@ public class Functions {
         }
     }
 }
+public class SparkEx {
+    public bool isHearingSpark;
+    public SparkEx(bool flag) {
+        this.isHearingSpark = flag;
+    }
+}
 
 //These bits are for the extra sprite logic/data storage
 public class Point
@@ -612,6 +721,23 @@ public class Point
         this.position = position;
         this.locked = locked;
     }
+    public void Update(PlayerEx something, Player self, RotCatOptions RotOptions, Line tentacle) {
+        if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && ((Input.GetKey(RotOptions.tentMovementEnable.Value) || Input.GetKey(RotOptions.tentMovementAutoEnable.Value)) && something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
+            this.locked = true;
+        }
+        else {
+            this.locked = false;
+        }
+        if (!this.locked && self.room != null) {
+            Vector2 positionBeforeUpdate = this.position;
+            this.position += (this.position - this.prevPosition) * Random.Range(0.9f,1.1f);
+            this.position += Vector2.down * self.room.gravity * Random.Range(0.15f,0.3f);
+            this.prevPosition = positionBeforeUpdate;
+        }
+        if (Array.IndexOf(tentacle.pList, this) == 0) {
+            this.position = self.mainBodyChunk.pos;
+        }
+    }
 }
 public class Stick {
     public Point pointA, pointB;
@@ -621,6 +747,14 @@ public class Stick {
         this.pointB = pointB;
         this.length = length;
     }
+    public void Update() {
+        Vector2 stickCenter = (this.pointA.position + this.pointB.position)/2;
+        Vector2 stickDir = (this.pointA.position - this.pointB.position).normalized;
+        if (!this.pointA.locked)
+            this.pointA.position = stickCenter + stickDir * this.length / 2;
+        if (!this.pointB.locked)
+            this.pointB.position = stickCenter - stickDir * this.length / 2;
+        }
 }
 public class Line {
     public Point[] pList;
@@ -638,6 +772,9 @@ public class BodyRot {
         this.offset = offset;
         this.scale = scale;
         /*this.bodyRotEyePosInSpriteList = bodyRotEyePosInSpriteList*/
+    }
+    public void Update() {
+        
     }
     public FSprite chunk1;
     public FSprite chunk2;
@@ -668,6 +805,12 @@ public class Circle {
             this.scaleY = scaleY;
         }
     }
+    public void Update() {
+        Vector2 direction = this.pointB.position - this.pointA.position;
+        Vector2 dirNormalized = direction.normalized;
+        Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
+        this.position = this.pointA.position + (dirNormalized * this.offset.y) + (perpendicularVector * this.offset.x);
+    }
     public Point pointA;
     public Point pointB;
     public Vector2 offset;
@@ -681,3 +824,4 @@ public class Circle {
     public bool grayscale;
     public float rotation;
 }
+//End of file

@@ -1,17 +1,6 @@
-using BepInEx;
 using UnityEngine;
-using Noise;
-using MoreSlugcats;
 using RWCustom;
-using System.Security;
-using System.Security.Permissions;
 using System;
-using System.Text.RegularExpressions;
-using System.Runtime.CompilerServices;
-using System.Collections.Generic;
-using Random = UnityEngine.Random;
-using SlugBase.Features;
-using SlugBase;
 
 namespace RotCat
 {
@@ -78,6 +67,9 @@ namespace RotCat
             orig(self, sLeaser, rCam, timeStacker, camPos);
             RotCat.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
+                if (self.player.room != null && RotCat.RotOptions.enableVignette.Value) {
+                    Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, RotCat.vignetteEffect.color, RotCat.vignetteEffect.color.a, camPos);
+                }
                 //base.Logger.LogDebug(self.player.flipDirection);
                 Functions.DrawFace(something, sLeaser, sLeaser.sprites[9]?.element?.name);
                 //sLeaser.sprites[something.initialCircleSprite-1].SetPosition(self.player.mainBodyChunk.pos + ((self.player.mainBodyChunk.pos-self.player.bodyChunks[1].pos).normalized * -6) - rCam.pos);
@@ -109,7 +101,10 @@ namespace RotCat
                 Functions.DrawTentacleCircles(something, camPos, tentacle1Circles, tentacle2Circles, tentacle3Circles, tentacle4Circles);
                 
                 //Colors all additional leg sprites DLL leg color, or the custom color chosen
-                Color initialColor = PlayerGraphics.CustomColorSafety(0);
+                Color initialColor = sLeaser.sprites[0].color;
+                if (!rCam.room.game.IsArenaSession && PlayerGraphics.CustomColorsEnabled()) {
+                    initialColor = PlayerGraphics.CustomColorSafety(0);
+                }
                 Color rotEyeColor = something.rotEyeColor;
                 float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
 
@@ -120,7 +115,7 @@ namespace RotCat
                             (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = initialColor;
                         }
                         else if (j > 70) {
-                            if (r > g && r > b) {
+                            /*if (r > g && r > b) {
                                 r = (float)(33+(4*(j-70)))/255;
                             }
                             else if (g > r && g > b) {
@@ -129,7 +124,10 @@ namespace RotCat
                             else if (b > r && b > g) {
                                 b = (float)(33+(4*(j-70)))/255;
                             }
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = new Color(r, g, b);
+                            Mathf.Clamp(r, 0f, 1f);
+                            Mathf.Clamp(g, 0f, 1f);
+                            Mathf.Clamp(b, 0f, 1f);*/
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
                         }
                     }
                 }
@@ -195,7 +193,7 @@ namespace RotCat
                 
                 //Makes tentacles and circles on them invisible if they are retracted into the scug
                 for (int i = something.initialCircleSprite; i < sLeaser.sprites.Length; i++) {
-                    if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite)) || Input.GetKey(RotCat.staticOptions.tentMovementAutoEnable.Value)) {
+                    if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite)) || Input.GetKey(RotCat.RotOptions.tentMovementAutoEnable.Value)) {
                         sLeaser.sprites[i].color = new Color(sLeaser.sprites[i].color.r, sLeaser.sprites[i].color.g, sLeaser.sprites[i].color.b, Mathf.Lerp(0f,1f,something.retractionTimer/10));
                     }
                 }

@@ -1,17 +1,5 @@
-using BepInEx;
 using UnityEngine;
-using Noise;
-using MoreSlugcats;
 using RWCustom;
-using System.Security;
-using System.Security.Permissions;
-using System;
-using System.Text.RegularExpressions;
-using System.Runtime.CompilerServices;
-using System.Collections.Generic;
-using Random = UnityEngine.Random;
-using SlugBase.Features;
-using SlugBase;
 
 namespace RotCat
 {
@@ -25,8 +13,9 @@ namespace RotCat
                     for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {
                         something.tentacles[i].pList[j].position = self.mainBodyChunk.pos - new Vector2(0,j);
                         something.tentacles[i].pList[j].prevPosition = self.mainBodyChunk.pos - new Vector2(0,j);
-                        something.targetPos[i].foundSurface = false;
-                        Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
+                        something.targetPos[i].foundSurface = false;    //Could put a check that determines the position of player and sets startPos behind them
+                        something.tentacles[i].iWantToGoThere = self.mainBodyChunk.pos;
+                        //Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
                         something.targetPos[i].targetPosition = self.mainBodyChunk.pos;
                     }
                 }
@@ -41,7 +30,8 @@ namespace RotCat
                         something.tentacles[i].pList[j].position = self.mainBodyChunk.pos - new Vector2(0,j);
                         something.tentacles[i].pList[j].prevPosition = self.mainBodyChunk.pos - new Vector2(0,j);
                         something.targetPos[i].foundSurface = false;
-                        Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
+                        something.tentacles[i].iWantToGoThere = self.mainBodyChunk.pos;
+                        //Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
                         something.targetPos[i].targetPosition = self.mainBodyChunk.pos;
                     }
                 }
