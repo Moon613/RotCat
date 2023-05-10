@@ -1,21 +1,11 @@
 using BepInEx;
 using UnityEngine;
-using Noise;
-using MoreSlugcats;
 using RWCustom;
 using System.Security;
 using System.Security.Permissions;
 using System;
-using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
-using System.Collections.Generic;
 using Random = UnityEngine.Random;
-using SlugBase.Features;
-using SlugBase;
-using System.IO;
-using Menu;
-using MonoMod.Cil;
-using Mono.Cecil.Cil;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -26,21 +16,25 @@ namespace RotCat;
 public class RotCat : BaseUnityPlugin
 {
     bool init = false;
-    public static FContainer darkContainer = new FContainer();
-    public static FSprite? vignetteEffect;
     public static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new();
     public static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new();
+    public static ConditionalWeakTable<Creature, CreatureEx> creatureYummersSprites = new();
+    public static FContainer darkContainer = new FContainer();
+    public static FSprite? vignetteEffect;
     public static bool appliedVignette = false;
     public static RotCatOptions RotOptions;
     bool configWorking = false;
-    public int timer = 0;
     public void OnEnable()
     {
         On.RainWorld.OnModsInit += Init;
         
         On.Player.NewRoom += CalmTentacles.CalmNewRoom;
 
-        On.DaddyLongLegs.Update += CreatureImmunities.DaddyImmune;
+        On.DaddyAI.IUseARelationshipTracker_UpdateDynamicRelationship += CreatureImmunities.DaddyAIImmune;
+
+        On.DaddyAI.Update += CreatureImmunities.DaddyAIImmune2;
+
+        On.DaddyTentacle.Update += CreatureImmunities.DaddyTentacleImmune;
 
         On.DaddyCorruption.LittleLeg.Update += CreatureImmunities.WallCystImmune;
 
@@ -66,13 +60,38 @@ public class RotCat : BaseUnityPlugin
 
         On.Menu.SleepAndDeathScreen.ctor += Vignette.CleanDarkContainerOnSleepAndDeathScreen;
 
-        On.Spark.AddToContainer += (orig, self, sLeaser, rCam, newContainer) => {
+        On.Spark.AddToContainer += (orig, self, sLeaser, rCam, newContainer) => {   //Shouldn't ever cause issues, just adds Spark sprites to the darkContainer if they are created by CreaturePing
             if (sparkLayering.TryGetValue(self, out SparkEx spark) && spark.isHearingSpark) {
                 newContainer = darkContainer;
             }
             orig(self, sLeaser, rCam, newContainer);
         };
 
+        On.Creature.ctor += (orig, self, abstractCreature, world) => {
+            orig(self, abstractCreature, world);
+            creatureYummersSprites.Add(self, new CreatureEx());
+        };
+
+        On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
+            orig(self, graspIndex);
+            tenticleStuff.TryGetValue(self, out var something);
+            Creature creature;
+            if (self.grasps[graspIndex].grabbedChunk.owner is not Creature) {return;} 
+            else {
+                creature = (self.grasps[graspIndex].grabbedChunk.owner as Creature);
+            }
+            if (!creature.dead && creatureYummersSprites.TryGetValue(creature, out CreatureEx thing) && !thing.isBeingEaten) {
+                thing.isBeingEaten = true;
+            }
+        };
+
+        On.GraphicsModule.DrawSprites += (orig, self, sLeaser, rCam, timeStacker, camPos) => {
+            orig(self, sLeaser, rCam, timeStacker, camPos);
+            if (self.owner is Creature creature && creatureYummersSprites.TryGetValue(creature, out CreatureEx thing) && thing.isBeingEaten) {
+
+            }
+        };
+        
         On.Player.ctor += (orig, self, abstractCreature, world) =>
         {
             orig(self, abstractCreature, world);
@@ -82,7 +101,7 @@ public class RotCat : BaseUnityPlugin
                 something.isRot = true;
             }
             if (something.isRot) {
-                self.abstractCreature.tentacleImmune = true;
+                //self.abstractCreature.tentacleImmune = true;
                 something.totalCircleSprites = something.circleAmmount * 4;
                 something.tentacleOne = new Line();
                 something.tentacleTwo = new Line();
@@ -95,7 +114,7 @@ public class RotCat : BaseUnityPlugin
                 something.decorativeTentacles[0] = new Line();
                 something.decorativeTentacles[1] = new Line();
                 something.randomPosOffest = new Vector2[something.decorativeTentacles.Length*2];
-                for (int i = 0; i < something.randomPosOffest.Length; i++) {
+                for (int i = 0; i < something.randomPosOffest.Length; i++) {    //Decides where to place the ends of the decorative tentacles
                     if (i%2==0) {
                         something.randomPosOffest[i] = new Vector2(Random.Range(0,-8f),Random.Range(-4f,1f));
                         //something.randomPosOffest[i] = new Vector2(-8f,1f);
@@ -156,24 +175,12 @@ public class RotCat : BaseUnityPlugin
             }
         };
 
-        /*On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
-            orig(self, graspIndex);
-            tenticleStuff.TryGetValue(self, out var something);
-            Creature creature;
-            if (self.grasps[graspIndex].grabbedChunk.owner is not Creature) {return;} else {creature = (self.grasps[graspIndex].grabbedChunk.owner as Creature);}
-            if (creature.bodyChunks.Length < 2) {return;}
-            else if (!creature.dead) {
-                Vector2 vector = creature.bodyChunks[0].pos - creature.bodyChunks[1].pos;
-                Vector2 normalVector = vector.normalized;
-                Vector2 perpVector = Custom.PerpendicularVector(normalVector);
-            }
-        };*/
-
         On.Player.Update += (orig, self, eu) =>
         {
             orig(self, eu);
             tenticleStuff.TryGetValue(self, out var something);
             if (something.isRot && self != null) {
+                //Debug.Log(self.mainBodyChunk.pos);
                 self.scavengerImmunity = 9999;  //Might want to add a system that calculates this based on rep, since you should be able to become friends if you want
                 something.overrideControls = Input.GetKey(RotOptions.tentMovementLeft.Value) || Input.GetKey(RotOptions.tentMovementRight.Value) || Input.GetKey(RotOptions.tentMovementDown.Value) || Input.GetKey(RotOptions.tentMovementUp.Value);
                 if (something.grabWallCooldown > 0) { //Doesn't do anything right now, need to get it to play nice with the logic first     //New note, this will probably go unused.
@@ -668,8 +675,8 @@ public class Functions {
         }
     }
     public static void UpdateVignette(RainWorld game, Player self, Color col, float vignetteRad, Vector2 camPos) {
-        float rVar = (self.mainBodyChunk.pos.x-camPos.x)/game.screenSize.x;
-        float gVar = (self.mainBodyChunk.pos.y-camPos.y)/game.screenSize.y;
+        float rVar = ((self.mainBodyChunk.pos.x-camPos.x)*0.94f)/game.screenSize.x;
+        float gVar = ((self.mainBodyChunk.pos.y-camPos.y)*0.9f)/game.screenSize.y;
         RotCat.vignetteEffect.color = new Color(rVar, gVar, col.b, vignetteRad);
         //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
     }
@@ -709,6 +716,10 @@ public class SparkEx {
     public SparkEx(bool flag) {
         this.isHearingSpark = flag;
     }
+}
+public class CreatureEx {
+    public bool isBeingEaten;
+    public int numOfCosmeticSprites;
 }
 
 //These bits are for the extra sprite logic/data storage
