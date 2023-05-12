@@ -144,7 +144,7 @@ namespace RotCat
                 {
                     Vector2 vector = Vector2.Lerp(tentacle.pList[0].prevPosition, tentacle.pList[0].position, timeStacker);
                     vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].prevPosition, tentacle.pList[1].position, timeStacker), vector);
-                    float width = 2.3f;//width
+                    float width = 2.35f;//width
                     for (int i = 0; i < tentacle.pList.Length; i++)
                     {
                         Vector2 vector2 = tentacle.pList[i].position;
@@ -193,7 +193,7 @@ namespace RotCat
                 
                 //Makes tentacles and circles on them invisible if they are retracted into the scug
                 for (int i = something.initialCircleSprite; i < sLeaser.sprites.Length; i++) {
-                    if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite)) || Input.GetKey(RotCat.RotOptions.tentMovementAutoEnable.Value)) {
+                    if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite))) {
                         sLeaser.sprites[i].color = new Color(sLeaser.sprites[i].color.r, sLeaser.sprites[i].color.g, sLeaser.sprites[i].color.b, Mathf.Lerp(0f,1f,something.retractionTimer/10));
                     }
                 }

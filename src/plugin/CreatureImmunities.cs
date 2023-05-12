@@ -11,7 +11,7 @@ namespace RotCat
             var trackedCreature = dRelation?.trackerRep?.representedCreature?.realizedCreature;
             if (self.daddy.Template.type != MoreSlugcatsEnums.CreatureTemplateType.TerrorLongLegs && trackedCreature is Player player && RotCat.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
                 //Debug.Log("Made it to changing relationship");
-                relationship.type = CreatureTemplate.Relationship.Type.StayOutOfWay;
+                relationship.type = CreatureTemplate.Relationship.Type.DoesntTrack;
                 relationship.intensity = 1f;
             }
             return relationship;
@@ -28,17 +28,19 @@ namespace RotCat
         }
         public static void DaddyTentacleImmune(On.DaddyTentacle.orig_Update orig, DaddyTentacle self) {
             orig(self);
-            if (self.grabChunk != null && self.grabChunk.owner is Player player && RotCat.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
-                self.grabChunk = null;
-            }
-            if (self.huntCreature != null && self.huntCreature.representedCreature.realizedCreature is Player player1 && RotCat.tenticleStuff.TryGetValue(player1, out var something1) && something1.isRot) {
-                self.huntCreature = null;
+            if (self.daddy.Template.type != MoreSlugcatsEnums.CreatureTemplateType.TerrorLongLegs) {
+                if (self.grabChunk != null && self.grabChunk.owner is Player player && RotCat.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
+                    self.grabChunk = null;
+                }
+                if (self.huntCreature != null && self.huntCreature.representedCreature.realizedCreature is Player player1 && RotCat.tenticleStuff.TryGetValue(player1, out var something1) && something1.isRot) {
+                    self.huntCreature = null;
+                }
             }
         }
         public static void WallCystImmune(On.DaddyCorruption.LittleLeg.orig_Update orig, DaddyCorruption.LittleLeg self, bool eu) {
             self.owner.eatCreatures.RemoveAll(c => c.creature is Player player && RotCat.tenticleStuff.TryGetValue(player, out var something) && something.isRot);
             if (self.grabChunk?.owner is Creature crit && crit is Player player && RotCat.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
-                (self.grabChunk.owner as Creature).GrabbedByDaddyCorruption = false;
+                player.GrabbedByDaddyCorruption = false;
                 self.grabChunk = null;
                 self.pullInPrey = 0f;
             }

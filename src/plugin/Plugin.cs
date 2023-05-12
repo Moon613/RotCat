@@ -6,6 +6,8 @@ using System.Security.Permissions;
 using System;
 using System.Runtime.CompilerServices;
 using Random = UnityEngine.Random;
+using MonoMod.Cil;
+using System.Collections.Generic;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -67,30 +69,19 @@ public class RotCat : BaseUnityPlugin
             orig(self, sLeaser, rCam, newContainer);
         };
 
-        On.Creature.ctor += (orig, self, abstractCreature, world) => {
-            orig(self, abstractCreature, world);
-            creatureYummersSprites.Add(self, new CreatureEx());
-        };
+        On.Creature.ctor += DigestionRotSprites.AddCWTToCreature;
 
-        On.Player.EatMeatUpdate += (orig, self, graspIndex) => {
-            orig(self, graspIndex);
-            tenticleStuff.TryGetValue(self, out var something);
-            Creature creature;
-            if (self.grasps[graspIndex].grabbedChunk.owner is not Creature) {return;} 
-            else {
-                creature = (self.grasps[graspIndex].grabbedChunk.owner as Creature);
-            }
-            if (!creature.dead && creatureYummersSprites.TryGetValue(creature, out CreatureEx thing) && !thing.isBeingEaten) {
-                thing.isBeingEaten = true;
-            }
-        };
+        On.Player.EatMeatUpdate += DigestionRotSprites.PlayerEatsCreature;
 
-        On.GraphicsModule.DrawSprites += (orig, self, sLeaser, rCam, timeStacker, camPos) => {
-            orig(self, sLeaser, rCam, timeStacker, camPos);
-            if (self.owner is Creature creature && creatureYummersSprites.TryGetValue(creature, out CreatureEx thing) && thing.isBeingEaten) {
+        On.Player.TossObject += DigestionRotSprites.TossAndRemoveCreature;
 
-            }
-        };
+        On.GraphicsModule.DrawSprites += DigestionRotSprites.DrawRotYumSprites;
+
+        On.Creature.SpitOutOfShortCut += DigestionRotSprites.ReassignRotSprites;
+
+        On.Creature.SuckedIntoShortCut += DigestionRotSprites.SuckIntoPipe;
+
+        IL.Player.EatMeatUpdate += DigestionRotSprites.ReplaceEatingSound;
         
         On.Player.ctor += (orig, self, abstractCreature, world) =>
         {
@@ -251,6 +242,8 @@ public class RotCat : BaseUnityPlugin
             }
         };
 
+        //IL.Menu.IntroRoll.ctor += AddIntroRollImage;
+
         #region Don't Mind this lol
         /*On.RoomCamera.ctor += (orig, self, game, cameraNumber) => {   //Leftover from when I was doing a slight amount of trolling :3
             orig(self, game, cameraNumber);
@@ -330,9 +323,36 @@ public class RotCat : BaseUnityPlugin
                 Debug.Log("Reset timer");
             }
         };*/
+        /*private static void AddIntroRollImage(ILContext il)
+        {
+            var cursor = new ILCursor(il);
+            if (!cursor.TryGotoNext(MoveType.Before, i => i.MatchLdloc(3)))
+            {
+                return;
+            }
+            cursor.RemoveRange(8);
+            if (!cursor.TryGotoPrev(MoveType.After, i => i.MatchLdstr("Intro_Roll_C_")))
+            {
+                return;
+            }
+            cursor.EmitDelegate((string str) =>
+            {
+                Debug.Log("Removed instructions and made it to destination, please remain seated with your seatbelts on.");
+                List<string> strArr = new List<string> {
+                    "gourmand",
+                    "rivulet",
+                    "spear",
+                    "artificer",
+                    "saint"
+                };
+                int prevLength = strArr.Count;
+                strArr.Add("abc123");
+                int randNum = Random.Range(0, strArr.Count);
+                return (randNum > prevLength)? strArr[randNum] : $"Intro_Roll_C_{strArr[randNum]}";
+            });
+        }*/
         #endregion
     }
-    
     private void Init(On.RainWorld.orig_OnModsInit orig, RainWorld self) {
         orig(self);
 
@@ -478,17 +498,20 @@ public class Functions {
             int upDown = (Input.GetKey(RotOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(RotOptions.tentMovementDown.Value)? -1:0);
             int rightLeft = (Input.GetKey(RotOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(RotOptions.tentMovementLeft.Value)? -1:0);
             
-            if (Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos) < 300f) {
-                
+            float dist = Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos);
+            if (dist < 300f) {
                 something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position += new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y));
             }
+            /*else if (dist > 305f) {
+                something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position = Vector2.MoveTowards(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position, self.mainBodyChunk.pos, 1*self.mainBodyChunk.vel.magnitude);
+            }*/
         }
         else {
             //self.canJump = 0;
             //self.wantToJump = 0;
             self.airFriction = 0.85f;
             self.customPlayerGravity = 0.2f;
-            if (self.feetStuckPos != null)  //Stop feet from magneting to the ground
+            if (self.feetStuckPos != null && !Input.GetKey(RotOptions.tentMovementAutoEnable.Value))  //Stop feet from magneting to the ground
                 self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
             if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
                 something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
@@ -578,7 +601,7 @@ public class Functions {
                 something.tentacles[i].iWantToGoThere = something.targetPos[i].targetPosition;
                 //self.room.AddObject(new Spark(something.tentacles[i].iWantToGoThere, new Vector2(5,5), Color.blue, null, 10, 20));  //Testing
             }
-            if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 0f:5f) && something.automateMovement) {
+            if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 5f:5f/*Can be adjusted maybe, rn it player multiple times for poles*/) && something.automateMovement) {
                 something.tentacles[i].isAttatchedToSurface = 0;
                 Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position);
                 
@@ -719,7 +742,11 @@ public class SparkEx {
 }
 public class CreatureEx {
     public bool isBeingEaten;
+    public bool redrawRotSprites;
+    public bool addNewSprite;
     public int numOfCosmeticSprites;
+    public int maxNumOfSprites;
+    public List<EatingRot> yummersRotting = new List<EatingRot>();
 }
 
 //These bits are for the extra sprite logic/data storage

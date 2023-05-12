@@ -12,7 +12,6 @@ public class CreaturePing : CosmeticSprite
     public float newRad;
     public float counter;
     public bool contracted;
-    public Room room;
 
     public CreaturePing(Vector2 soundPos, Color col, float rad, Room room)
     {
@@ -22,7 +21,6 @@ public class CreaturePing : CosmeticSprite
         this.rad = rad;
         this.counter = 0.01f;
         this.contracted = false;
-        this.room = room;
     }
     public override void Update(bool eu)
     {

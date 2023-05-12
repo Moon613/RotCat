@@ -48,7 +48,7 @@ public class Vignette
         orig(self, noise);
         if (self.game.session.characterStats.name.ToString().ToLower() == "slugrot" || !self.game.IsStorySession) {
             PhysicalObject source = noise.sourceObject; 
-            Debug.Log($"{source} and {source.GetType()}");
+            //Debug.Log($"{source} and {source.GetType()}");
             for (int i = 0; i < self.PlayersInRoom.Count; i++) {
                 if (source != self.PlayersInRoom[i] && (RotCat.tenticleStuff.TryGetValue(self.PlayersInRoom[i], out PlayerEx player) && player.isRot) && (player.hearingCooldown <= 0 || CalculateMod5PlusMinus1(player.hearingCooldown) || player.hearingCooldown==40) && Custom.Dist(self.PlayersInRoom[i].mainBodyChunk.pos, noise.pos) <= noise.strength*1.5f) {
                     if (RotCat.RotOptions.enableVignette.Value) {
@@ -67,9 +67,9 @@ public class Vignette
     public static void LocateSmallSounds(On.VirtualMicrophone.orig_PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool orig, VirtualMicrophone self, SoundID soundID, PositionedSoundEmitter controller, bool loop, float vol, float pitch, bool randomStartPosition) {
         orig(self, soundID, controller, loop, vol, pitch, randomStartPosition);
         if (self.room != null && (self.room.game.session.characterStats.name.ToString().ToLower() == "slugrot" || !self.room.game.IsStorySession)) {
-            Debug.Log($"Volume is: {vol}. Pitch is: {pitch}. SoundID is: {soundID}");
+            //Debug.Log($"Volume is: {vol}. Pitch is: {pitch}. SoundID is: {soundID}");
             if (self.room != null && controller is ChunkSoundEmitter c && c.chunk.owner is Creature) {
-                if ((controller as ChunkSoundEmitter).chunk.owner is Player p && RotCat.tenticleStuff.TryGetValue(p, out var player) && player.isRot) {
+                if (c.chunk.owner is Player p && RotCat.tenticleStuff.TryGetValue(p, out var player) && player.isRot) {
                     return;
                 }
                 for (int i = 0; i < self.room.PlayersInRoom.Count; i++) {
