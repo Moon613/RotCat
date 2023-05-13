@@ -1,9 +1,9 @@
 {
 	"id": "rotcat",
 	"name": "Slugrot",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"hide_version": false,
-	"authors": "Art: Lurzard\nCode: MoonWatcher610",
+	"authors": "Art: Lurzard\nCode: Moon",
 	"description": "Play as the Slugrot, a fusion of the Rot and a slugcat who found themselves in a bad position, at a bad time.\nOr perhaps, the perfect place at just the right time...",
 	"requirements": ["slime-cubed.slugbase"],
 	"requirements_names": ["Slugbase"],

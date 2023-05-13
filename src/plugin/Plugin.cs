@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using Random = UnityEngine.Random;
 using MonoMod.Cil;
 using System.Collections.Generic;
+using Steamworks;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -82,6 +83,11 @@ public class RotCat : BaseUnityPlugin
         On.Creature.SuckedIntoShortCut += DigestionRotSprites.SuckIntoPipe;
 
         IL.Player.EatMeatUpdate += DigestionRotSprites.ReplaceEatingSound;
+
+        On.Menu.MainMenu.ctor += (orig, self, manager, showRegionSpecificBkg) => {
+            orig(self, manager, showRegionSpecificBkg);
+            self.AddMainMenuButton(new Menu.SimpleButton(self, self.pages[0], self.Translate("ROTCAT"), "ROTCAT", new Vector2(0f, 0f), new Vector2(100f, 30f)), new Action(OpenSaysMe), 0);
+        };
         
         On.Player.ctor += (orig, self, abstractCreature, world) =>
         {
@@ -353,6 +359,17 @@ public class RotCat : BaseUnityPlugin
         }*/
         #endregion
     }
+
+    private void OpenSaysMe()
+    {
+        if (SteamManager.Initialized && SteamUtils.IsOverlayEnabled()) {
+            SteamFriends.ActivateGameOverlayToWebPage("https://steamcommunity.com/sharedfiles/filedetails/?id=2949461454");
+        }
+        else {
+            Application.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=2949461454");
+        }
+    }
+
     private void Init(On.RainWorld.orig_OnModsInit orig, RainWorld self) {
         orig(self);
 

@@ -14,6 +14,9 @@
     <Reference Include="BepInEx">
       <HintPath>..\..\game\BepInEx\core\BepInEx.dll</HintPath>
     </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>..\..\..\MoreDLLs\game\RainWorld_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
+    </Reference>
     <Reference Include="HOOKS-Assembly-CSharp">
       <HintPath>..\..\game\BepInEx\plugins\HOOKS-Assembly-CSharp.dll</HintPath>
     </Reference>

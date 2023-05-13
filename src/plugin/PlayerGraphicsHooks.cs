@@ -62,7 +62,6 @@ namespace RotCat
                 self.AddToContainer(sLeaser, rCam, null);
             }
         }
-    
         public static void RotDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos) {
             orig(self, sLeaser, rCam, timeStacker, camPos);
             RotCat.tenticleStuff.TryGetValue(self.player, out var something);
@@ -135,7 +134,12 @@ namespace RotCat
                 //Colors the decorative tentacles
                 for (int i = something.initialDecoLegSprite; i < something.initialLegSprite; i++) {
                     for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
-                        (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
+                        if (j <= 20) {
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
+                        }
+                        else {
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
+                        }
                     }
                 }
                 
@@ -217,7 +221,6 @@ namespace RotCat
                 }
             }
         }
-    
         public static void RotAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContainer) {
             orig(self, sLeaser, rCam, newContainer);
             RotCat.tenticleStuff.TryGetValue(self.player, out var something);

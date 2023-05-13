@@ -1,6 +1,6 @@
 {
 	"id": "slugrot",
-	"name": "The Slugrot",
+	"name": "The Courier",
 	"description": "A slugcat that is borne of the infection, shaped, molded by it.<LINE>Use you newfound abilities to conquer the land",
 	"features": {
 		"color": "1b0b21",
@@ -32,6 +32,7 @@
 		"cycle_length_max": 13,
 		"food_min": 7,
 		"food_max": 12,
+		"title_card": "abc123",
 		"world_state": ["Rivulet", "Red"]
 	}
 }
