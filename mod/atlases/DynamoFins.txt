@@ -1,0 +1,43 @@
+{"frames": {
+
+"DynamoFin1.png":
+{
+	"frame": {"x":4,"y":4,"w":8,"h":104},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":8,"h":104},
+	"sourceSize": {"w":8,"h":104}
+},
+"DynamoFin2.png":
+{
+	"frame": {"x":12,"y":4,"w":8,"h":94},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":8,"h":94},
+	"sourceSize": {"w":8,"h":94}
+},
+"DynamoFin3.png":
+{
+	"frame": {"x":20,"y":4,"w":7,"h":102},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":7,"h":102},
+	"sourceSize": {"w":7,"h":102}
+},
+"DynamoFin4.png":
+{
+	"frame": {"x":27,"y":4,"w":8,"h":104},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":8,"h":104},
+	"sourceSize": {"w":8,"h":104}
+}},
+"meta": {
+	"app": "https://www.codeandweb.com/texturepacker",
+	"version": "1.0",
+	"image": "DynamoFins.png",
+	"format": "RGBA8888",
+	"size": {"w":39,"h":112},
+	"scale": "1",
+}
+}

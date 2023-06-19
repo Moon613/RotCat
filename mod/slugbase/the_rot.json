@@ -5,9 +5,9 @@
 	"features": {
 		"color": "1b0b21",
 		"custom_colors": [
-			{"name": "Body", "story": "1b0b21", "arena": ["1b0b21"]},
-			{"name": "Eyes", "story": "0000FF", "arena": ["0000FF"]},
-			{"name": "Rot Eyes", "story": "0A0AFF", "arena": ["0A0AFF"]}
+			{"name": "Body", "story": "1b0b21", "arena": ["1b0b21", "210b0b", "21200b", "c4c4c4"]},
+			{"name": "Eyes", "story": "0000FF", "arena": ["0000FF", "FF0000", "FFF900", "101010"]},
+			{"name": "Rot Eyes", "story": "0A0AFF", "arena": ["0A0AFF", "ff0a0a", "fff90a", "5a5a5a"]}
 		],
 		"start_room": ["RM_SFINAL", "GW_B05"],
 		"select_menu_scene": "slugcat_rot",
@@ -32,7 +32,6 @@
 		"cycle_length_max": 13,
 		"food_min": 7,
 		"food_max": 12,
-		"title_card": "abc123",
-		"world_state": ["Rivulet", "Red"]
+		"world_state": ["Slugrot", "Rivulet"]
 	}
 }
