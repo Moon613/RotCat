@@ -1,18 +1,28 @@
 using UnityEngine;
 using RWCustom;
 using System;
+using SlugBase;
+using System.Linq;
 
-namespace RotCat
+namespace Chimeric
 {
-    public class PlayerGraphicsHooks {
+    public class RotGraphicsHooks {
         public static void RotInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) {
             //base.Logger.LogDebug("Initiating Sprites");
             orig(self, sLeaser, rCam);
             //base.Logger.LogDebug(sLeaser.sprites.Length);
-            RotCat.tenticleStuff.TryGetValue(self.player, out var something);
+            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
                 something.rotEyeColor = new Color((float)27/255, (float)11/255, (float)253/255);
-                if (PlayerGraphics.CustomColorsEnabled()) {
+                if (self.useJollyColor) {
+                    something.rotEyeColor = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
+                }
+                else if (!PlayerGraphics.CustomColorsEnabled()) {
+                    SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == "slugrot").ToList()[0], out SlugBaseCharacter chara);
+                    SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
+                    something.rotEyeColor = colors[2].GetColor(self.player.playerState.playerNumber);
+                }
+                else if (PlayerGraphics.CustomColorsEnabled()) {
                     something.rotEyeColor = PlayerGraphics.CustomColorSafety(2);
                 }
                 something.faceAtlas = Futile.atlasManager.LoadAtlas("atlases/RotFace");
@@ -21,8 +31,9 @@ namespace RotCat
                 something.initialCircleSprite = sLeaser.sprites.Length - (something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites);
                 something.initialDecoLegSprite = sLeaser.sprites.Length - (something.tentacles.Length + something.decorativeTentacles.Length);
                 something.initialLegSprite = sLeaser.sprites.Length - something.tentacles.Length;
-                for (int i = 0; i < sLeaser.sprites.Length-something.initialLegSprite; i++) {
-                    sLeaser.sprites[something.initialLegSprite + i] = TriangleMesh.MakeLongMeshAtlased((int)something.segments, false, true);
+                something.endOfsLeaser = sLeaser.sprites.Length;
+                for (int i = 0; i < something.endOfsLeaser-something.initialLegSprite; i++) {
+                    sLeaser.sprites[something.initialLegSprite + i] = TriangleMesh.MakeLongMeshAtlased(something.segments, false, true);
                 }
                 for (int i = 0; i < something.initialLegSprite-something.initialDecoLegSprite; i++) {
                     sLeaser.sprites[something.initialDecoLegSprite + i] = TriangleMesh.MakeLongMeshAtlased((int)something.decorationSegments, false, true);
@@ -64,10 +75,10 @@ namespace RotCat
         }
         public static void RotDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos) {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            RotCat.tenticleStuff.TryGetValue(self.player, out var something);
+            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
-                if (self.player.room != null && RotCat.RotOptions.enableVignette.Value) {
-                    Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, RotCat.vignetteEffect.color, RotCat.vignetteEffect.color.a, camPos);
+                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value) {
+                    Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, Plugin.vignetteEffect.color, camPos);
                 }
                 //base.Logger.LogDebug(self.player.flipDirection);
                 Functions.DrawFace(something, sLeaser, sLeaser.sprites[9]?.element?.name);
@@ -104,10 +115,8 @@ namespace RotCat
                 if (!rCam.room.game.IsArenaSession && PlayerGraphics.CustomColorsEnabled()) {
                     initialColor = PlayerGraphics.CustomColorSafety(0);
                 }
-                Color rotEyeColor = something.rotEyeColor;
-                float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
 
-                for (int i = something.initialLegSprite; i < sLeaser.sprites.Length; i++)
+                for (int i = something.initialLegSprite; i < something.endOfsLeaser; i++)
                 {
                     for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
                         if (j <= 70) {
@@ -126,7 +135,7 @@ namespace RotCat
                             Mathf.Clamp(r, 0f, 1f);
                             Mathf.Clamp(g, 0f, 1f);
                             Mathf.Clamp(b, 0f, 1f);*/
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
                         }
                     }
                 }
@@ -135,10 +144,10 @@ namespace RotCat
                 for (int i = something.initialDecoLegSprite; i < something.initialLegSprite; i++) {
                     for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
                         if (j <= 20) {
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
                         }
                         else {
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
+                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(something.rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
                         }
                     }
                 }
@@ -196,11 +205,11 @@ namespace RotCat
                 }
                 
                 //Makes tentacles and circles on them invisible if they are retracted into the scug
-                for (int i = something.initialCircleSprite; i < sLeaser.sprites.Length; i++) {
+                /*for (int i = something.initialCircleSprite; i < something.endOfsLeaser; i++) {
                     if ((something.retractionTimer <= -10f && (i < something.initialDecoLegSprite || i >= something.initialLegSprite))) {
                         sLeaser.sprites[i].color = new Color(sLeaser.sprites[i].color.r, sLeaser.sprites[i].color.g, sLeaser.sprites[i].color.b, Mathf.Lerp(0f,1f,something.retractionTimer/10));
                     }
-                }
+                }*/
                 //Generates the Body Rot Bulbs, sets the scale, and colors them
                 for (int i = something.initialBodyRotSprite; i < something.initialCircleSprite; i++) {  //k is used in order to go over the rList twice, since it holds the data for the bulbs, and the bulb and X sprites are separate in order to allow for custom colors for both
                     int halfLength = ((something.initialCircleSprite - something.initialBodyRotSprite)/2) + something.initialBodyRotSprite;
@@ -223,7 +232,7 @@ namespace RotCat
         }
         public static void RotAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContainer) {
             orig(self, sLeaser, rCam, newContainer);
-            RotCat.tenticleStuff.TryGetValue(self.player, out var something);
+            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
                 //base.Logger.LogDebug("sLeaser length");
                 //base.Logger.LogDebug(sLeaser.sprites.Length);
@@ -249,7 +258,7 @@ namespace RotCat
                         MidContainer.AddChild(spriteLol);
                         spriteLol.MoveBehindOtherNode(sLeaser.sprites[1]);
                     }
-                    for (int i = something.initialLegSprite; i < sLeaser.sprites.Length; i++) {
+                    for (int i = something.initialLegSprite; i < something.endOfsLeaser; i++) {
                         FSprite spriteLol = sLeaser.sprites[i];
                         foregroundContainer.RemoveChild(spriteLol);
                         MidContainer.AddChild(spriteLol);

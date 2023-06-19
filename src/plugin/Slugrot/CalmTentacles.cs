@@ -1,13 +1,13 @@
 using UnityEngine;
 using RWCustom;
 
-namespace RotCat
+namespace Chimeric
 {
     public class CalmTentacles
     {
         public static void CalmNewRoom(On.Player.orig_NewRoom orig, Player self, Room newRoom) {
             orig(self, newRoom);
-            RotCat.tenticleStuff.TryGetValue(self, out var something);
+            Plugin.tenticleStuff.TryGetValue(self, out var something);
             if (something.isRot) {
                 for (int i = 0; i < something.tentacles.Length; i++) {
                     for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {
@@ -23,7 +23,7 @@ namespace RotCat
         }
         public static void CalmSpitOutOfShortCut(On.Player.orig_SpitOutOfShortCut orig, Player self, IntVector2 pos, Room newRoom, bool spitOutAllStacks) {
             orig(self, pos, newRoom, spitOutAllStacks);
-            RotCat.tenticleStuff.TryGetValue(self, out var something);
+            Plugin.tenticleStuff.TryGetValue(self, out var something);
             if (something.isRot) {
                 for (int i = 0; i < something.tentacles.Length; i++) {
                     for (int j = something.tentacles[i].pList.Length-1; j >= 0; j--) {

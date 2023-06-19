@@ -43,12 +43,12 @@ public class FunctionEvent : Conversation.DialogueEvent
     }
 }
 
-public class NullPebblesSubBehaviour : SSOracleBehavior.SubBehavior
+public class NullPebblesSubBehaviour : SSOracleBehavior.SubBehavior //What Pebbles normally does when not talking
 {
     public NullPebblesSubBehaviour() : base(null, Enums.EmptySubBehaviorID) { }
 }
 
-public class NullPebblesConversationBehaviour : SSOracleBehavior.ConversationBehavior
+public class NullPebblesConversationBehaviour : SSOracleBehavior.ConversationBehavior   //What Pebbles normally does while talking
 {
     public NullPebblesConversationBehaviour() : base(null, Enums.EmptySubBehaviorID, Enums.EmptyConversationID) { }
 }
@@ -69,7 +69,9 @@ public abstract class CustomPebblesConversation : SSOracleBehavior.PebblesConver
             this.ChatLabel = new OracleChatLabel(owner);
             this.oracle.room.AddObject(this.ChatLabel);
             this.ChatLabel.Hide();
-            if (!ModManager.MMF || !owner.oracle.room.game.IsStorySession || !owner.oracle.room.game.GetStorySession.saveState.miscWorldSaveData.memoryArraysFrolicked || this.oracle.room.world.rainCycle.timer <= this.oracle.room.world.rainCycle.cycleLength / 4) return;
+            if (!ModManager.MMF || !owner.oracle.room.game.IsStorySession || !owner.oracle.room.game.GetStorySession.saveState.miscWorldSaveData.memoryArraysFrolicked || this.oracle.room.world.rainCycle.timer <= this.oracle.room.world.rainCycle.cycleLength / 4) {
+                return;
+            }
             this.oracle.room.world.rainCycle.timer = this.oracle.room.world.rainCycle.cycleLength / 4;
             this.oracle.room.world.rainCycle.dayNightCounter = 0;
         }

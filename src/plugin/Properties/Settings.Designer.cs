@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace RotCat.Properties {
+namespace Chimeric.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
