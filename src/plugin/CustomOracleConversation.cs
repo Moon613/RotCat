@@ -1,180 +1,109 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using SlugBase.Features;
+using UnityEngine;
+using static SlugBase.Features.FeatureTypes;
 
-//namespace RotCat;
-
-public static class Enums
+namespace Chimeric
 {
-    public static SSOracleBehavior.Action EmptyAction;
-    public static SSOracleBehavior.SubBehavior.SubBehavID EmptySubBehaviorID;
-    public static Conversation.ID EmptyConversationID;
-    
-    public static Conversation.ID PebblesFirstMeetID;
-    public static Conversation.ID PebblesSecondMeetID;
-    
-    public static SSOracleBehavior.Action PebblesFirstMeetAction;
-    public static SSOracleBehavior.Action PebblesSecondMeetAction;
-
-    public static Conversation.ID MoonFirstMeet;
-    
-    public static void Register()
+    public static class ConversationOverrides
     {
-        PebblesFirstMeetID = new Conversation.ID("hello_there_id");
-        PebblesSecondMeetID = new Conversation.ID("bye_there_id", true);
-        
-        EmptyAction = new SSOracleBehavior.Action("action_empty", true);
-        EmptySubBehaviorID = new SSOracleBehavior.SubBehavior.SubBehavID("subbheaviourid_empty", true);
-        EmptyConversationID = new Conversation.ID("conversationid_empty", true);
-    }
-}
-
-public class FunctionEvent : Conversation.DialogueEvent
-{
-    private Action func;
-
-    public FunctionEvent(Conversation owner, Action func) : base(owner, 0)
-    {
-        this.func = func;
-    }
-
-    public override void Activate()
-    {
-        base.Activate();
-        func();
-    }
-}
-
-public class NullPebblesSubBehaviour : SSOracleBehavior.SubBehavior //What Pebbles normally does when not talking
-{
-    public NullPebblesSubBehaviour() : base(null, Enums.EmptySubBehaviorID) { }
-}
-
-public class NullPebblesConversationBehaviour : SSOracleBehavior.ConversationBehavior   //What Pebbles normally does while talking
-{
-    public NullPebblesConversationBehaviour() : base(null, Enums.EmptySubBehaviorID, Enums.EmptyConversationID) { }
-}
-
-public abstract class CustomPebblesConversation : SSOracleBehavior.PebblesConversation
-{
-    public class CustomPebblesConversationBehaviour : SSOracleBehavior.ConversationBehavior
-    {
-        public OracleChatLabel ChatLabel;
-
-        public CustomPebblesConversation BoundConversation;
-
-        public override bool CurrentlyCommunicating => base.CurrentlyCommunicating || !this.ChatLabel.finishedShowingMessage;
-
-        public CustomPebblesConversationBehaviour(SSOracleBehavior owner, CustomPebblesConversation boundTo) : base(owner, Enums.EmptySubBehaviorID, Enums.EmptyConversationID)
+        public static readonly GameFeature<bool> CustomConversations = GameBool("CustomConversations");
+        public static void Hooks()
         {
-            BoundConversation = boundTo;
-            this.ChatLabel = new OracleChatLabel(owner);
-            this.oracle.room.AddObject(this.ChatLabel);
-            this.ChatLabel.Hide();
-            if (!ModManager.MMF || !owner.oracle.room.game.IsStorySession || !owner.oracle.room.game.GetStorySession.saveState.miscWorldSaveData.memoryArraysFrolicked || this.oracle.room.world.rainCycle.timer <= this.oracle.room.world.rainCycle.cycleLength / 4) {
-                return;
-            }
-            this.oracle.room.world.rainCycle.timer = this.oracle.room.world.rainCycle.cycleLength / 4;
-            this.oracle.room.world.rainCycle.dayNightCounter = 0;
+            On.GhostConversation.AddEvents += GhostOVerride;
+            On.SSOracleBehavior.PebblesConversation.AddEvents += pebblesOverride;
+            On.SLOracleBehaviorHasMark.MoonConversation.AddEvents += MoonOverride;
         }
-
-        public CustomPebblesConversationBehaviour(SSOracleBehavior owner, SubBehavID subBehavID, ID convID, CustomPebblesConversation boundTo) : base(owner, subBehavID, convID)
+        public static void MoonOverride(On.SLOracleBehaviorHasMark.MoonConversation.orig_AddEvents orig, SLOracleBehaviorHasMark.MoonConversation self)
         {
-            BoundConversation = boundTo;
-            this.ChatLabel = new OracleChatLabel(owner);
-            this.oracle.room.AddObject(this.ChatLabel);
-            this.ChatLabel.Hide();
-            if (!ModManager.MMF || !owner.oracle.room.game.IsStorySession || !owner.oracle.room.game.GetStorySession.saveState.miscWorldSaveData.memoryArraysFrolicked || this.oracle.room.world.rainCycle.timer <= this.oracle.room.world.rainCycle.cycleLength / 4) return;
-            this.oracle.room.world.rainCycle.timer = this.oracle.room.world.rainCycle.cycleLength / 4;
-            this.oracle.room.world.rainCycle.dayNightCounter = 0;
-        }
-
-        public override void Update()
-        {
-            base.Update();
-            
-            if (this.owner.conversation != null && this.owner.conversation.id == this.convoID && this.owner.conversation.slatedForDeletion)
+            orig(self);
+            if(CustomConversations.TryGet(self.myBehavior.oracle.room.game,out bool value) && value)
             {
-                this.owner.conversation = null;
+                if(self.id == Conversation.ID.MoonFirstPostMarkConversation)
+                {
+                    self.events = new List<Conversation.DialogueEvent>();
+                    switch (Mathf.Clamp(self.State.neuronsLeft, 0, 5)) //this gets the number of neurons left for moon.
+                    {
+                        case 0:
+                            break;
+                        case 1:
+                            self.events.Add(new Conversation.TextEvent(self, 0, "...", 0));
+                            return;
+                        case 2:
+                            self.events.Add(new Conversation.TextEvent(self, 0, "... 2 NEURONS LEFT!", 0));
+                            return;
+                        case 3:
+                            self.events.Add(new Conversation.TextEvent(self, 0, "3 NEURON CONVO!", 0));
+                            return;
+                        case 4:
+                            self.events.Add(new Conversation.TextEvent(self, 0, "4 NEURON CONVO!!!", 0));
+                            return;
+                        case 5:
+                            self.events.Add(new Conversation.TextEvent(self, 0, "Hewwo Wittle Cweatuwe!", 0));
+
+                            return;
+
+                    }
+                }
             }
         }
-
-        public override void Deactivate()
+        public static void pebblesOverride(On.SSOracleBehavior.PebblesConversation.orig_AddEvents orig, SSOracleBehavior.PebblesConversation self)
         {
-            base.Deactivate();
-            this.ChatLabel.Hide();
-            base.Deactivate();
+            orig(self);
+            if(CustomConversations.TryGet(self.owner.oracle.room.game,out bool custom) && custom)
+            {
+                if (self.id == Conversation.ID.Pebbles_White) //Pebbles_White is the default convo as far as i can see.
+                {
+                    self.events = new List<Conversation.DialogueEvent>();
+                    self.events.Add(new Conversation.TextEvent(self, 0, "Hewwo wittle cweatuwe!", 0));
+
+
+                    //heres some things you might want!
+
+                    //Make five pebbles wait for the player to be still:
+                    self.events.Add(new SSOracleBehavior.PebblesConversation.PauseAndWaitForStillEvent(self, self.convBehav, 20));
+
+                    //convos for already existing mark
+                    if (self.owner.playerEnteredWithMark)
+                    {
+                        self.events.Add(new Conversation.TextEvent(self, 0, "You already have a mark!", 0));
+                    }
+                    else
+                    {
+                        self.events.Add(new Conversation.TextEvent(self, 0, "This conversation requires me giving you the mark!", 0));
+                    }
+
+                    //convo if you've gone thru mem arrays:
+                    if (self.owner.oracle.room.game.IsStorySession && self.owner.oracle.room.game.GetStorySession.saveState.miscWorldSaveData.memoryArraysFrolicked)
+                    {
+                        self.events.Add(new Conversation.TextEvent(self, 0, "Pwease don't go in my memowy awways", 0));
+                    }
+
+                    //convo for slugpups in room!
+                    if(ModManager.MSC && self.owner.CheckSlugpupsInRoom()){
+                        self.events.Add(new Conversation.TextEvent(self, 0, "Scuppies in room!", 0));
+                    }
+
+                    //convo for creauters in room
+                    if (ModManager.MMF && self.owner.CheckStrayCreatureInRoom() != CreatureTemplate.Type.StandardGroundCreature)
+                    {
+                        self.events.Add(new Conversation.TextEvent(self, 0, "Creature in room!", 0));
+                    }
+                }
+            }
         }
-    }
-
-    public CustomPebblesConversationBehaviour BoundConversationBehaviour;
-
-    protected CustomPebblesConversation(SSOracleBehavior owner, ID conversationID) : base(owner, null, conversationID, owner.dialogBox)
-    {
-        BoundConversationBehaviour = new CustomPebblesConversationBehaviour(owner, this);
-        base.convBehav = BoundConversationBehaviour;
-    }
-
-    protected void Speak(string text, int initialWait = 0, int textLinger = 5)
-    {
-        this.events.Add(new TextEvent(this, initialWait, Translate(text), textLinger));
-    }
-
-    protected void PauseEvent(int pauseFrames)
-    {
-        this.events.Add(new PauseAndWaitForStillEvent(this, this.convBehav, pauseFrames));
-    }
-
-    protected void Wait(int waitTime)
-    {
-        this.events.Add(new WaitEvent(this, waitTime));
-    }
-
-    protected void DoSpecialEvent(string eventName, int initialWait = 5)
-    {
-        this.events.Add(new SpecialEvent(this, initialWait, eventName));
-    }
-
-    protected void FuncEvent(Action func)
-    {
-        this.events.Add(new FunctionEvent(this, func));
-    }
-
-    public override void Update()
-    {
-        age++;
-        if (waitForStill)
+        public static void GhostOVerride(On.GhostConversation.orig_AddEvents orig, GhostConversation self)
         {
-            if (!convBehav.CurrentlyCommunicating && convBehav.communicationPause > 0) { convBehav.communicationPause--; }
-
-            if (!convBehav.CurrentlyCommunicating && convBehav.communicationPause < 1 && owner.allStillCounter > 20) { waitForStill = false; }
+            orig(self);
+            if (CustomConversations.TryGet(self.ghost.room.game,out bool value) && value) //check if this game has custom conversations
+            {
+                if(self.id == Conversation.ID.Ghost_CC) //check for which ghost this is
+                {
+                    self.events = new List<Conversation.DialogueEvent>(); //remove all events already existing
+                    self.events.Add(new Conversation.TextEvent(self, 0, "This is a test!", 0)); //add in your own text events!
+                    self.events.Add(new Conversation.TextEvent(self, 0, "This should be the second text!", 0));
+                }
+            }
         }
-        else { base.Update(); }
-    }
-}
-
-public abstract class CustomMoonConversation : SLOracleBehaviorHasMark.MoonConversation
-{
-    protected CustomMoonConversation(ID id, OracleBehavior oracleBehaviour, SLOracleBehaviorHasMark.MiscItemType describeItem) : base(id, oracleBehaviour, describeItem)
-    {
-        
-    }
-    
-    protected void Speak(string text, int initialWait = 0, int textLinger = 5)
-    {
-        this.events.Add(new TextEvent(this, initialWait, Translate(text), textLinger));
-    }
-
-    protected void Wait(int waitTime)
-    {
-        this.events.Add(new WaitEvent(this, waitTime));
-    }
-
-    protected void DoSpecialEvent(string eventName, int initialWait = 5)
-    {
-        this.events.Add(new SpecialEvent(this, initialWait, eventName));
-    }
-
-    protected void FuncEvent(Action func)
-    {
-        this.events.Add(new FunctionEvent(this, func));
     }
 }

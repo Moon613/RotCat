@@ -35,6 +35,8 @@ namespace Chimeric
         public static bool loaded = false;
         public void OnEnable()
         {
+            ConversationOverrides.Hooks();  // Won't do anything until the bool in the slugbase json is changed to true
+
             On.RainWorld.LoadResources += (orig, self) => {
                 orig(self);
                 if (!loaded)
@@ -50,6 +52,8 @@ namespace Chimeric
 
                 }
             };
+
+            ConversationID.RegisterValues();
 
             SoundEnums.RegisterValues();
 
@@ -87,7 +91,7 @@ namespace Chimeric
 
             On.Creature.SpitOutOfShortCut += Vignette.RotCatSpitOutOfShortcut;
 
-            On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += Vignette.LocateSmallSounds;
+            On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += Vignette.CystsReacts2;
 
             On.Menu.SleepAndDeathScreen.ctor += Vignette.CleanDarkContainerOnSleepAndDeathScreen;
 
@@ -673,16 +677,18 @@ namespace Chimeric
             }
         }
         ///<summary> Update the color of the vignette sprite, and use inputs to do math to determine the center position. r + g are replaced, b + a are passed through </summary>
-        public static void UpdateVignette(RainWorld game, Player self, Color col, Vector2 camPos) {
+        public static void UpdateVignette(RainWorld game, Player self, Color col, Vector2 camPos, bool visible = true) {
             float rVar = (self.mainBodyChunk.pos.x-camPos.x)/(game.screenSize.x);
             float gVar = (self.mainBodyChunk.pos.y/**0.8f+80f*/-camPos.y)/(game.screenSize.y)/(86f/48f)+0.22f;    //Math numbers are gotten by doing the best thing ever, complete guesswork!
             Debug.Log($"{rVar} and {gVar} and {col.b} and {col.a}");
             Plugin.vignetteEffect.color = new Color(rVar, gVar, col.b, col.a);
+            Plugin.vignetteEffect.isVisible = visible;
             //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
         }
         ///<summary> Hard-replacement of the Vignette color </summary>
-        public static void UpdateVignette(Color col) {
+        public static void UpdateVignette(Color col, bool visible = true) {
             Plugin.vignetteEffect.color = new Color(col.r, col.g, col.b, col.a);
+            Plugin.vignetteEffect.isVisible = visible;
         }
         public static Color GetColor(Color rotEyeColor, bool brightBackground, bool darkBackground) {
             float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
@@ -744,8 +750,7 @@ namespace Chimeric
     }
     public static class SoundEnums
     {
-        public static void RegisterValues()
-        {
+        public static void RegisterValues() {
             SoundEnums.Silence = new SoundID("Silence", true);
         }
         public static SoundID Silence;

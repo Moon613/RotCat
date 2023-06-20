@@ -77,7 +77,7 @@ namespace Chimeric
             orig(self, sLeaser, rCam, timeStacker, camPos);
             Plugin.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
-                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value) {
+                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == "slugrot") {
                     Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, Plugin.vignetteEffect.color, camPos);
                 }
                 //base.Logger.LogDebug(self.player.flipDirection);
