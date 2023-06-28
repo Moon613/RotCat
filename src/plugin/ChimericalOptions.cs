@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using BepInEx.Logging;
 using Menu.Remix.MixedUI;
 using UnityEngine;
@@ -6,17 +7,17 @@ namespace Chimeric
 {
     public class ChimericOptions : OptionInterface {
         private readonly ManualLogSource Logger;
-        public static Configurable<KeyCode> tentMovementUp {get; set;}
-        public static Configurable<KeyCode> tentMovementDown {get; set;}
-        public static Configurable<KeyCode> tentMovementLeft {get; set;}
-        public static Configurable<KeyCode> tentMovementRight {get; set;}
-        public static Configurable<KeyCode> tentMovementEnable {get; set;}
-        public static Configurable<KeyCode> tentMovementAutoEnable {get; set;}
-        public static Configurable<bool> enableVignette {get; set;}
-        public static Configurable<int> scareDuration {get; set;}
-        public static Configurable<int> yeetusMagnitude {get; set;}
-        private UIelement[] UIRotArrPlayerOptions;
-        private UIelement[] UIDynoArrPlayerOptions;
+        [AllowNull] public static Configurable<KeyCode> tentMovementUp {get; set;}
+        [AllowNull] public static Configurable<KeyCode> tentMovementDown {get; set;}
+        [AllowNull] public static Configurable<KeyCode> tentMovementLeft {get; set;}
+        [AllowNull] public static Configurable<KeyCode> tentMovementRight {get; set;}
+        [AllowNull] public static Configurable<KeyCode> tentMovementEnable {get; set;}
+        [AllowNull] public static Configurable<KeyCode> tentMovementAutoEnable {get; set;}
+        [AllowNull] public static Configurable<bool> enableVignette {get; set;}
+        [AllowNull] public static Configurable<int> scareDuration {get; set;}
+        [AllowNull] public static Configurable<int> yeetusMagnitude {get; set;}
+        [AllowNull] private UIelement[] UIRotArrPlayerOptions;
+        [AllowNull] private UIelement[] UIDynoArrPlayerOptions;
 
         public ChimericOptions(Plugin pluginInstance, ManualLogSource logSource) {
             Logger = logSource;
@@ -40,7 +41,7 @@ namespace Chimeric
                 dynoTab
             };
 
-            UIRotArrPlayerOptions = new UIelement[]
+            UIelement[]? UIRotArrPlayerOptions = new UIelement[]
             {
                 new OpLabel(260f, 570f, "Options", true),
 
@@ -61,7 +62,7 @@ namespace Chimeric
                 new OpLabel(50f, 225f, Translate("Enable Vignette effect"), false),
                 new OpCheckBox(enableVignette, new Vector2(400f, 220f))
             };
-            UIDynoArrPlayerOptions = new UIelement[]
+            UIelement[]? UIDynoArrPlayerOptions = new UIelement[]
             {
                 new OpLabel(260f, 570f, Translate("Options"), true),
 

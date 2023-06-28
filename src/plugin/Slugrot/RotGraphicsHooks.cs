@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Chimeric
 {
-    public class RotGraphicsHooks {
+    public static class RotGraphicsHooks {
         public static void RotInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) {
             //base.Logger.LogDebug("Initiating Sprites");
             orig(self, sLeaser, rCam);
@@ -118,11 +118,11 @@ namespace Chimeric
 
                 for (int i = something.initialLegSprite; i < something.endOfsLeaser; i++)
                 {
-                    for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
-                        if (j <= 70) {
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = initialColor;
+                    for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh)?.verticeColors.Length; j++) {
+                        if (j <= 70 && sLeaser.sprites[i] is TriangleMesh triMesh) {
+                            triMesh.verticeColors[j] = initialColor;
                         }
-                        else if (j > 70) {
+                        else if (j > 70 && sLeaser.sprites[i] is TriangleMesh triMesh1) {
                             /*if (r > g && r > b) {
                                 r = (float)(33+(4*(j-70)))/255;
                             }
@@ -135,19 +135,19 @@ namespace Chimeric
                             Mathf.Clamp(r, 0f, 1f);
                             Mathf.Clamp(g, 0f, 1f);
                             Mathf.Clamp(b, 0f, 1f);*/
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
+                            triMesh1.verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
                         }
                     }
                 }
                 
                 //Colors the decorative tentacles
                 for (int i = something.initialDecoLegSprite; i < something.initialLegSprite; i++) {
-                    for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh).verticeColors.Length; j++) {
-                        if (j <= 20) {
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
+                    for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh)?.verticeColors.Length; j++) {
+                        if (j <= 20 && sLeaser.sprites[i] is TriangleMesh triMesh) {
+                            triMesh.verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
                         }
-                        else {
-                            (sLeaser.sprites[i] as TriangleMesh).verticeColors[j] = Color.Lerp(something.rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
+                        else if (sLeaser.sprites[i] is TriangleMesh triMesh1) {
+                            triMesh1.verticeColors[j] = Color.Lerp(something.rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
                         }
                     }
                 }
@@ -165,15 +165,15 @@ namespace Chimeric
                         //base.Logger.LogDebug(vector + " " + vector2);
                         if (i == 0)
                         {
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, self.player.mainBodyChunk.pos - perpendicularVector * width - camPos);
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4, self.player.mainBodyChunk.pos - perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + perpendicularVector * width - camPos);
                         }
                         else {
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, vector - perpendicularVector * width - camPos);
-                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, vector + perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4, vector - perpendicularVector * width - camPos);
+                            (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 1, vector + perpendicularVector * width - camPos);
                         }
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 - perpendicularVector * width - camPos);
-                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + perpendicularVector * width - camPos);
+                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 2, vector2 - perpendicularVector * width - camPos);
+                        (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 3, vector2 + perpendicularVector * width - camPos);
                         vector = vector2;
                     }
                     nextTentacleSprite += 1;
@@ -190,15 +190,15 @@ namespace Chimeric
                         Vector2 a = Custom.PerpendicularVector((vector - vector2).normalized);
                         //base.Logger.LogDebug(vector + " " + vector2);
                         if (i == 0) {
-                            (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, self.player.mainBodyChunk.pos - a * thickness - camPos);
-                            (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + a * thickness - camPos);
+                            (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4, self.player.mainBodyChunk.pos - a * thickness - camPos);
+                            (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + a * thickness - camPos);
                         }
                         else {
-                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4, vector - a * thickness - camPos);
-                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 1, vector + a * thickness - camPos);
+                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4, vector - a * thickness - camPos);
+                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 1, vector + a * thickness - camPos);
                         }
-                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 2, vector2 - a * thickness - camPos);
-                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh).MoveVertice(i * 4 + 3, vector2 + a * thickness - camPos);
+                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 2, vector2 - a * thickness - camPos);
+                        (sLeaser.sprites[something.initialDecoLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 3, vector2 + a * thickness - camPos);
                         vector = vector2;
                     }
                     nextTentacleSprite += 1;

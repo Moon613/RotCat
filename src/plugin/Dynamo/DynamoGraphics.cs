@@ -17,7 +17,7 @@ namespace Chimeric
         {
             orig(self, sLeaser, rCam, timeStacker, camPos);
             if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
-                Debug.Log($"{sLeaser.sprites[3].color.ToString()}");
+                //Debug.Log($"{sLeaser.sprites[3].color.ToString()}");
                 for (int i = 0; i < something.fList.Count; i++) {
                     //Debug.Log($"{sLeaser.sprites?[something.initialFinSprite + i]} and {sLeaser.sprites?[0]}");
                     //Debug.Log(self.player.bodyChunks[0].Rotation);
@@ -34,10 +34,13 @@ namespace Chimeric
                     //This is mostly unused, will have to update it I ever use it
                     else if (something.fList[i].connectedTailSegment?.connectedSegment == null) {
                         Debug.Log($"LMAO YOU NEED TO UPDATE THIS TO WORK CORRECTLY {i}");
+                        Debug.LogWarning("Depreciated code being used!");
                         sLeaser.sprites[something.initialFinSprite + i].SetPosition(Functions.RotateAroundPoint(self.player.bodyChunks[1].pos-camPos, something.fList[i].posOffset, -something.fList[i].connectedSprite.rotation));
 
                         sLeaser.sprites[something.initialFinSprite + i].rotation = Custom.VecToDeg(self.player.bodyChunks[1].Rotation)+90-(something.fList[i].additionalRotation * (something.fList[i].flipped? 1 : -1));
                     }
+                    
+                    #region Colors
                     if (self.useJollyColor) {
                         sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
                     }
@@ -49,6 +52,8 @@ namespace Chimeric
                     else if (PlayerGraphics.CustomColorsEnabled()) {
                         sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.CustomColorSafety(2);
                     }
+                    #endregion
+                    
                     float addition = self.player.submerged? Mathf.Lerp(something.fList[i].swimRange[0], something.fList[i].swimRange[1], Mathf.Sin(something.fList[i].swimCycle)) : 0;
                     //Debug.Log($"addition is: {addition} and {something.fList[i].swimRange[0]} and {something.fList[i].swimRange[1]} and {Mathf.Sin(something.swimCycle)}");
                     something.fList[i].additionalRotation = Mathf.Lerp(something.fList[i].foldRotation, something.fList[i].startAdditionalRotation, (float)something.timeInWater/40f) + addition;
@@ -107,27 +112,33 @@ namespace Chimeric
                         }
                     }
                 }
-                //Debug.Log(self.player.animation.value.ToString());
-                //Debug.Log(self.player.animation.value.ToString().ToLower());
-                if (self.player.animation.value.ToString().ToLower() == "roll") {
-                    //Debug.Log($"flip direction is: {self.player.flipDirection}");
+                
+                #region Roll Animation for tail
+                if (self.player.animation == Player.AnimationIndex.Roll) {
                     Vector2 increment = new Vector2(0, 0f);
-                    for (int i = 0; i < self.tail.Length; i++) {
-                        self.tail[i].pos = Functions.RotateAroundPoint(self.tail[0].pos, increment, (i==0?0:1) * (-(Custom.VecToDeg(self.player.bodyChunks[0].Rotation)+(i*6f*-self.player.flipDirection))-(90f*-self.player.flipDirection)));
-                        increment += new Vector2(0, -7.25f);
-                        Debug.Log($"Set to position: {self.tail[i].pos}");
+                    for (int i = 0; i < self.tail.Length; i++)
+                    {
+                        if (i != 0) {
+                            var startVel = Custom.VecToDeg(Custom.DirVec(self.tail[i].pos, self.tail[i-1].pos));
+                            startVel += 45f * -self.player.flipDirection;
+                            self.tail[i].vel = Custom.DegToVec(startVel) * 15f;
+                        }
+                        //self.tail[i].pos = Functions.RotateAroundPoint(self.tail[0].pos, increment, (i==0?0:1) * (-(Custom.VecToDeg(self.player.bodyChunks[0].Rotation)+(i*6f*-self.player.flipDirection))-(90f*-self.player.flipDirection)));
+                        //increment += new Vector2(0, -7.25f);
                     }
                     for (int i = 0; i < self.player.room.abstractRoom.creatures.Count; i++) {
                         var crit = self.player.room.abstractRoom.creatures[i].realizedCreature;
-                        if (Custom.DistLess(crit.mainBodyChunk.pos, self.tail[self.tail.Length-2].pos, 30f) && crit != self.player) {
+                        if (Custom.DistLess(crit.mainBodyChunk.pos, self.tail[self.tail.Length-2].pos, 55f) && crit != self.player) {
                             var prevState = crit.State;
                             crit.Violence(self.player.mainBodyChunk, null, crit.mainBodyChunk, null, Creature.DamageType.Blunt, 0.4f, 60f);
                             crit.SetKillTag(self.player.abstractCreature);
                             crit.mainBodyChunk.vel += new Vector2(ChimericOptions.yeetusMagnitude.Value*self.player.flipDirection, 19f);
-                            Debug.Log($"{crit.mainBodyChunk.mass} and {crit.mainBodyChunk.vel}");
+                            Debug.Log($"{crit.Template.type} was launched by Dynamo");
+                            //Debug.Log($"{crit.mainBodyChunk.mass} and {crit.mainBodyChunk.vel}");
                         }
                     }
                 }
+                #endregion
             }
         }
         public static void DynoInitSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
@@ -204,10 +215,10 @@ namespace Chimeric
         public static void DynoAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContainer)
         {
             orig(self, sLeaser, rCam, newContainer);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && sLeaser.sprites.Length > 13) {
-                for (int i = 0; i < sLeaser.sprites.Length-something.initialFinSprite; i++) {
-                    sLeaser.sprites[something.initialFinSprite + i].RemoveFromContainer();
-                    rCam.ReturnFContainer("Midground").AddChild(sLeaser.sprites[something.initialFinSprite + i]);
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && sLeaser.sprites.Length > 13 && sLeaser.sprites != null) {
+                for (int i = 0; i < sLeaser.sprites?.Length-something.initialFinSprite; i++) {
+                    sLeaser.sprites?[something.initialFinSprite + i].RemoveFromContainer();
+                    rCam.ReturnFContainer("Midground").AddChild(sLeaser.sprites?[something.initialFinSprite + i]);
                     sLeaser.sprites?[something.initialFinSprite + i].MoveBehindOtherNode(sLeaser.sprites[0]);
                 }
             }

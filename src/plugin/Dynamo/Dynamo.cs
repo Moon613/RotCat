@@ -1,11 +1,9 @@
 using UnityEngine;
-using RWCustom;
-using System;
 using Random = UnityEngine.Random;
 using System.Collections.Generic;
-using static TriangleMesh;
 using System.Linq;
 using MoreSlugcats;
+using static RelationshipTracker;
 
 namespace Chimeric;
 
@@ -34,16 +32,16 @@ public partial class Dynamo
     public static void FearDyno(On.Creature.orig_Update orig, Creature self, bool eu)
     {
         orig(self, eu);
-        if (self != null && self.abstractCreature != null && self.abstractCreature.abstractAI != null && self.abstractCreature.abstractAI.RealAI != null && self.room != null && self.abstractCreature.abstractAI.RealAI is IUseARelationshipTracker) {
-            var relationships = self.abstractCreature.abstractAI.RealAI.relationshipTracker.relationships;
-            for (int i = 0; i < self.room?.abstractRoom.creatures.Count; i++) {
-                var crit = self.room.abstractRoom.creatures[i].realizedCreature;
+        if (self.room?.game?.StoryCharacter?.value == "dynamo" && self != null && self.abstractCreature != null && self.abstractCreature.abstractAI != null && self.abstractCreature.abstractAI.RealAI != null && self.room != null && self.abstractCreature.abstractAI.RealAI is IUseARelationshipTracker) {
+            for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
+                Creature crit = self.room.abstractRoom.creatures[i].realizedCreature;
                 float randNum = Random.Range(0, 201);
                 //Debug.Log($"randNum is {randNum}");
                 if (Plugin.creatureYummersSprites.TryGetValue(self, out var thing) && thing.shouldFearDynamo && crit is Player player && Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo && thing.fearTime > 0 && randNum != 150) {
+                    List<DynamicRelationship>? relationships = self.abstractCreature.abstractAI?.RealAI.relationshipTracker.relationships;
                     thing.fearTime--;
                     //Debug.Log($"Feartime is: {thing.fearTime}");
-                    for (int j = 0; j < relationships.Count; j++) {
+                    for (int j = 0; j < relationships?.Count; j++) {
                         if (relationships[j].trackerRep.representedCreature.realizedCreature == player && (self.Template.type != MoreSlugcatsEnums.CreatureTemplateType.AquaCenti && self.Template.type != CreatureTemplate.Type.Centiwing)) {
                             //Debug.Log("Creature is afraid");
                             relationships[j].currentRelationship.type = CreatureTemplate.Relationship.Type.Afraid;
@@ -70,13 +68,20 @@ public partial class Dynamo
                 }
             }
         }
-        if (self is Centipede centi && (centi.AquaCenti || centi.Centiwing) && self.grasps != null && self.grasps.Length > 0) {
-            for (int i = 0; i < self.grasps.Length; i++) {
-                if (self.grasps[i] != null && self.grasps[i].grabbedChunk != null && self.grasps[i].grabbedChunk.owner != null && self.grasps[i].grabbedChunk.owner is Player player && Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
-                    self.grasps[i].Release();
-                    Debug.Log("Removed grasp");
-                }
+
+        if (self is not Centipede centi || (!centi.AquaCenti && !centi.Centiwing) || self.grasps == null ||
+            self.grasps.Length <= 0)
+        {
+            return;
+        }
+        foreach (Creature.Grasp? grasp in self.grasps)
+        {
+            if (grasp == null || grasp.grabbedChunk == null || grasp.grabbedChunk.owner == null || grasp.grabbedChunk.owner is not Player player || !Plugin.tenticleStuff.TryGetValue(player, out var something) || !something.isDynamo)
+            {
+                continue;
             }
+            grasp.Release();
+            Debug.Log("Removed grasp");
         }
         //else {Debug.Log($"Not even a tracker {self.Template.type.value}");}
     }
@@ -87,8 +92,9 @@ public partial class Dynamo
             Debug.Log($"Velocity is: {self.mainBodyChunk.vel}, Magnitude is: {self.mainBodyChunk.vel.magnitude}  {self.slugcatStats.name.value}");
         }
         if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isDynamo) {
+            #region Swimming Velocity Stuff
             //Debug.Log(something.swimTimer);
-            if (self.animation.value.ToLower() == "surfaceswim" || self.animation.value.ToLower() == "deepswim") {
+            if (self.animation == Player.AnimationIndex.SurfaceSwim || self.animation == Player.AnimationIndex.DeepSwim) {
                 if (something.timeInWater < 40) {
                     something.timeInWater++;
                 }
@@ -96,7 +102,7 @@ public partial class Dynamo
                     something.timeInWaterUpTo80++;
                 }
             }
-            else if (self.animation.value.ToLower() != "surfaceswim" && self.animation.value.ToLower() != "deepswim") {
+            else if (self.animation != Player.AnimationIndex.SurfaceSwim && self.animation != Player.AnimationIndex.DeepSwim) {
                 if (something.timeInWater > 0) {
                     something.timeInWater--;
                 }
@@ -104,7 +110,7 @@ public partial class Dynamo
                     something.timeInWaterUpTo80 = 0;
                 }
             }
-            if (self.animation.value.ToLower() == "surfaceswim" && !self.input[1].jmp && self.input[0].jmp) {
+            if (self.animation == Player.AnimationIndex.SurfaceSwim && !self.input[1].jmp && self.input[0].jmp) {
                 self.mainBodyChunk.vel.y += 20f;
             }
             if (self.submerged) {
@@ -175,8 +181,10 @@ public partial class Dynamo
                     something.fList[i].swimCycle = Mathf.PI/6f;
                 }
             }
+            #endregion
             something.prevInput = new Vector2(self.input[0].x, self.input[0].y);
-            if (something.crawlToRoll && self.bodyMode == Player.BodyModeIndex.Default) {
+            #region Funny Roll
+            if (something.crawlToRoll && self.bodyMode == Player.BodyModeIndex.Default || self.animation == Player.AnimationIndex.BellySlide) {
                 //self.mainBodyChunk.vel.y = 0;
                 //self.allowRoll = 50;
                 self.rollDirection = self.flipDirection;
@@ -187,6 +195,7 @@ public partial class Dynamo
                 self.bodyChunks[1].vel.x = 8.75f * self.flipDirection;
                 something.crawlToRoll = false;
             }
+            #endregion
         }
 
         orig(self, eu);

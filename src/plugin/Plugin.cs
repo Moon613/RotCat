@@ -14,9 +14,12 @@ using MonoMod.Cil;
 using System.IO;
 using MonoMod.RuntimeDetour;
 using static System.Reflection.BindingFlags;
+using System.Diagnostics.CodeAnalysis;
 
-[module: UnverifiableCode]
+#pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
+[module: UnverifiableCode]
+#pragma warning restore CS0618 // Type or member is obsolete
 
 namespace Chimeric
 {
@@ -150,7 +153,6 @@ namespace Chimeric
 
             On.Menu.Remix.MixedUI.OpTab.ctor += (orig, self, owner, name) => {
                 orig(self, owner, name);
-                //Debug.Log("djuhasjbhndfiowbn");
                 if (name == "Slugrot") {
                     //Debug.Log("Yippee!");
                     Debug.Log($"Canvas scale is: {self.CanvasSize}");
@@ -348,15 +350,15 @@ namespace Chimeric
         public TargetPos[] targetPos = new TargetPos[4] {new TargetPos(), new TargetPos(), new TargetPos(), new TargetPos()};
         public bool automateMovement = false;   //Determines whether the tentacles will guide themselves toward a wall/pole
         public float grabWallCooldown = 0;  //Currently unused, honestly can't remember what I wanted to do with it
-        public Vector2[] randomPosOffest;   //Currently not used, applies a force the the 2 decorative tentacles behind the scug
+        [AllowNull] public Vector2[] randomPosOffest;   //Currently not used, applies a force the the 2 decorative tentacles behind the scug
         public bool overrideControls = false;   //If the player starts using custom movement keys instead of the default scug movement, this is set to true and false otherwise
         public int circleAmmount = 19;  //Change this to alter the amount of circle sprites that can be made
         public int initialCircleSprite;     //Stores the position of the initial tantacle circle sprite in the sprite list
         public int initialBodyRotSprite;    //Stores the position of the initial bodyRot sprite in the sprite list
         public int bodyRotSpriteAmount = 8;     //Change this whenever I change the amount of Rot sprites on the body
-        public BodyRot[] rList;     //An array that stores the logic for the body rot sprites
+        [AllowNull] public BodyRot[] rList;     //An array that stores the logic for the body rot sprites
         public Color rotEyeColor;   //Should store and control the color of the X sprites from the slugbase custom color
-        public FAtlas faceAtlas;
+        [AllowNull] public FAtlas faceAtlas;
         public bool eating = false;
         public float timer = 0f;
         public int hearingCooldown = 0;
@@ -370,7 +372,7 @@ namespace Chimeric
         public List<Fin> fList = new List<Fin>();
         public int timeInWater;
         public int timeInWaterUpTo80;
-        public AbstractOnTentacleStick stuckCreature;
+        [AllowNull] public AbstractOnTentacleStick stuckCreature;
         public bool crawlToRoll;
         public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation
             public Vector2 targetPosition = new Vector2(0,0);
@@ -483,7 +485,7 @@ namespace Chimeric
                 //self.wantToJump = 0;
                 self.airFriction = 0.85f;
                 self.customPlayerGravity = 0.2f;
-                if (self.feetStuckPos != null && !Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))  //Stop feet from magneting to the ground
+                if (self.feetStuckPos != null && !Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))  //Stop feet from magnetising to the ground
                     self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
                 if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
                     something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
@@ -491,7 +493,7 @@ namespace Chimeric
                     something.targetPos[0].hasConnectionSpot = true;
                 }
                 something.automateMovement = true;
-                int connectionsToSurface = 0;   //Get how many tentacles are attatched to the terrain/poles
+                int connectionsToSurface = 0;   //Get how many tentacles are attached to the terrain/poles
                 foreach (var tentacle in something.tentacles) {
                     if (tentacle.isAttatchedToSurface == 1) {
                         connectionsToSurface += 1;
@@ -501,8 +503,8 @@ namespace Chimeric
                     something.automateMovement = false;
                     //self.controller = new Player.NullController();
                 }
-                
-                #region BodyChunkMovements
+
+#region BodyChunkMovements
                 //Debug.Log(something.timer);
                 if (connectionsToSurface == 0 && Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value) && !Input.GetKey(ChimericOptions.tentMovementEnable.Value)) {
                     self.customPlayerGravity = 0.2f;
@@ -532,7 +534,7 @@ namespace Chimeric
                         }
                     }
                 }
-                #endregion
+#endregion
             }
         }
         public static void TentaclesFindPositionToGoTo(PlayerEx something, Player self, float startPos) {
@@ -557,6 +559,7 @@ namespace Chimeric
                             //something.targetPos[i].isPole = (self.room.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y)).AnyBeam);
                             something.targetPos[i].targetPosition = position + (something.targetPos[i].isPole? (position-self.mainBodyChunk.pos).normalized * 5 : new Vector2(0,0));
                             something.targetPos[i].foundSurface = true;
+                            goto End;
                         }
                         /*else if (!something.targetPos[i].foundSurface && self.room != null && (tile == null || (!tile.Solid && !tile.AnyBeam))) {
                             something.targetPos[i].foundSurface = false;
@@ -564,9 +567,7 @@ namespace Chimeric
                         }*/
                     }
                 }
-                //base.Logger.LogDebug(something.targetPos[i]);
-                //self.room.AddObject(new Spark(something.targetPos[i].targetPosition, new Vector2(-5,5), Color.green, null, 10, 20));
-                //self.room.AddObject(new Spark(something.targetPos[i].targetPosition, new Vector2(5,5), Color.green, null, 10, 20));
+                End:;
             }
         }
         public static void MoveTentacleToPosition(PlayerEx something, Player self) {
@@ -598,8 +599,8 @@ namespace Chimeric
             }
         }
         ///<summary> Replaced the normal face with Slugrot's face </summary>
-        public static void DrawFace(PlayerEx something, RoomCamera.SpriteLeaser sLeaser, string name) {
-            if (name != null && name.StartsWith("Face") && something.faceAtlas._elementsByName.TryGetValue("Rot" + name, out var element)) {
+        public static void DrawFace(PlayerEx something, RoomCamera.SpriteLeaser sLeaser, string? name) {
+            if (name != null && name != null && name.StartsWith("Face") && something.faceAtlas._elementsByName.TryGetValue("Rot" + name, out var element)) {
                 sLeaser.sprites[9].element = element;
                 //base.Logger.LogDebug(element.name);
                 //base.Logger.LogDebug(sLeaser.sprites[9].scaleX);
@@ -678,17 +679,28 @@ namespace Chimeric
         }
         ///<summary> Update the color of the vignette sprite, and use inputs to do math to determine the center position. r + g are replaced, b + a are passed through </summary>
         public static void UpdateVignette(RainWorld game, Player self, Color col, Vector2 camPos, bool visible = true) {
-            float rVar = (self.mainBodyChunk.pos.x-camPos.x)/(game.screenSize.x);
-            float gVar = (self.mainBodyChunk.pos.y/**0.8f+80f*/-camPos.y)/(game.screenSize.y)/(86f/48f)+0.22f;    //Math numbers are gotten by doing the best thing ever, complete guesswork!
-            Debug.Log($"{rVar} and {gVar} and {col.b} and {col.a}");
-            Plugin.vignetteEffect.color = new Color(rVar, gVar, col.b, col.a);
-            Plugin.vignetteEffect.isVisible = visible;
-            //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
+            if (Plugin.vignetteEffect != null) {
+                float rVar = (self.mainBodyChunk.pos.x-camPos.x)/(game.screenSize.x);
+                float gVar = (self.mainBodyChunk.pos.y/**0.8f+80f*/-camPos.y)/(game.screenSize.y)/(86f/48f)+0.22f;    //Math numbers are gotten by doing the best thing ever, complete guesswork!
+                //Debug.Log($"{rVar} and {gVar} and {col.b} and {col.a}");
+                Plugin.vignetteEffect.color = new Color(rVar, gVar, col.b, col.a);
+                Plugin.vignetteEffect.isVisible = visible;
+                //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
+            }
+            else {
+                Debug.LogWarning("VignetteEffect was null!");
+            }
         }
         ///<summary> Hard-replacement of the Vignette color </summary>
         public static void UpdateVignette(Color col, bool visible = true) {
-            Plugin.vignetteEffect.color = new Color(col.r, col.g, col.b, col.a);
-            Plugin.vignetteEffect.isVisible = visible;
+            if (Plugin.vignetteEffect != null) {
+                Plugin.vignetteEffect.color = new Color(col.r, col.g, col.b, col.a);
+                Plugin.vignetteEffect.isVisible = visible;
+                //Debug.Log($"Default Color is: {Shader.GetGlobalColor("_InputColorA")}");
+            }
+            else {
+                Debug.LogWarning("VignetteEffect was null!");
+            }
         }
         public static Color GetColor(Color rotEyeColor, bool brightBackground, bool darkBackground) {
             float r = rotEyeColor.r, g = rotEyeColor.g, b = rotEyeColor.b;
@@ -748,14 +760,7 @@ namespace Chimeric
         public int fearTime = -1;
         public List<EatingRot> yummersRotting = new List<EatingRot>();
     }
-    public static class SoundEnums
-    {
-        public static void RegisterValues() {
-            SoundEnums.Silence = new SoundID("Silence", true);
-        }
-        public static SoundID Silence;
-    }
-
+    
     ///<summary>The pivot points for the tentacles, where they can bend. To be replaced with tailSegments</summary>
     public class Point
     {
@@ -767,7 +772,7 @@ namespace Chimeric
             this.locked = locked;
         }
         public void Update(PlayerEx something, Player self, Line tentacle) {
-            if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && ((Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && (/*(Array.IndexOf(something.tentacles, tentacle) == 0) || */something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
+            if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && ((Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
                 this.locked = true;
             }
             else {
@@ -803,9 +808,9 @@ namespace Chimeric
             }
     }
     public class Line {
-        public Point[] pList;
-        public Stick[] sList;
-        public Circle[] cList;
+        [AllowNull] public Point[] pList;
+        [AllowNull] public Stick[] sList;
+        [AllowNull] public Circle[] cList;
         public Vector2 iWantToGoThere;
         public int isAttatchedToSurface = 0;
         public Vector2 decoPushDirection = new Vector2(0,0);
@@ -907,8 +912,8 @@ namespace Chimeric
             this.swimCycle = swimCycle;
             this.startSwimCycle = startSwimCycle;
         }
-        public TailSegment? connectedTailSegment;
-        public FSprite? connectedSprite;
+        [AllowNull] public TailSegment connectedTailSegment;
+        [AllowNull] public FSprite connectedSprite;
         public Vector2 posOffset;
         public float additionalRotation;
         public bool flipped;
@@ -922,7 +927,7 @@ namespace Chimeric
     }
     public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStick
     {
-        public AbstractPhysicalObject Player
+        [AllowNull] public AbstractPhysicalObject Player
         {
             get
             {
@@ -933,7 +938,7 @@ namespace Chimeric
                 this.A = value;
             }
         }
-        public AbstractPhysicalObject PhysObject
+        [AllowNull] public AbstractPhysicalObject PhysObject
         {
             get
             {
@@ -959,8 +964,8 @@ namespace Chimeric
             });
         }
         public void Update() {
-            Creature crit = (this.PhysObject.realizedObject as Creature);
-            Player player = (this.Player.realizedObject as Player);
+            Creature? crit = (this.PhysObject.realizedObject as Creature);
+            Player? player = (this.Player.realizedObject as Player);
             if (crit != null && player != null) {
                 if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
                     crit.mainBodyChunk.pos = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
@@ -972,11 +977,13 @@ namespace Chimeric
         }
         public void ChangeOverlap(bool newOverlap)
         {
-            Creature crit = (this.PhysObject.realizedObject as Creature);
-            Player player = (this.Player.realizedObject as Player);
+            Creature? crit = (this.PhysObject.realizedObject as Creature);
+            Player? player = (this.Player.realizedObject as Player);
             //crit.CollideWithObjects = newOverlap;
             //crit.canBeHitByWeapons = newOverlap;
-            crit.GoThroughFloors = newOverlap;
+            if (crit != null) {
+                crit.GoThroughFloors = newOverlap;
+            }
             /*if (crit.graphicsModule == null || player.room == null)
             {
                 return;

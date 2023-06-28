@@ -167,7 +167,7 @@ namespace Chimeric
                         }
                         Color col = Color.blue;
                         if (self.useJollyColor) {
-                            sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
+                            sLeaser.sprites[something.initialFinSprite + i + j].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
                         }
                         else if (!PlayerGraphics.CustomColorsEnabled()) {
                             SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == "dynamo").ToList()[0], out SlugBaseCharacter chara);

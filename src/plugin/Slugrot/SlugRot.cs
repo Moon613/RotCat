@@ -60,12 +60,12 @@ namespace Chimeric
                 }
                 else {
                     something.automateMovement = false;
-                    if (something.stuckCreature != null) {
+                    if (something.stuckCreature != null && something.stuckCreature.PhysObject != null) {
                         something.stuckCreature.ChangeOverlap(true);
                         something.stuckCreature.Deactivate();
-                        //something.stuckCreature.Player = null;
-                        //something.stuckCreature.PhysObject = null;
-                        //something.stuckCreature = null;
+                        something.stuckCreature.PhysObject = null;
+                        something.stuckCreature.Player = null;
+                        something.stuckCreature = null;
                     }
                 }
                 if (!something.automateMovement && !self.dead) {
