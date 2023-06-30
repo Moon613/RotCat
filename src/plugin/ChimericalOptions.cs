@@ -58,7 +58,6 @@ namespace Chimeric
                 new OpKeyBinder(tentMovementEnable, new Vector2(350f, 340f), new Vector2(120f, 30f)) {description = Translate("Enable movement via tentacles")},
                 new OpLabel(50f, 310f, Translate("Activate automatic tentacle movement"), false),
                 new OpKeyBinder(tentMovementAutoEnable, new Vector2(350f, 305f), new Vector2(120f, 30f)) {description = Translate("Activate tentacles without choosing an initial surface")},
-                //new OpRect(new Vector2(0, 280), new Vector2(650, 0)) {doesBump=false},
                 new OpLabel(50f, 225f, Translate("Enable Vignette effect"), false),
                 new OpCheckBox(enableVignette, new Vector2(400f, 220f))
             };

@@ -3,6 +3,7 @@ using Noise;
 using RWCustom;
 using Random = UnityEngine.Random;
 using Menu;
+using System;
 
 namespace Chimeric
 {
@@ -13,7 +14,21 @@ namespace Chimeric
             orig(self, game);
             Debug.Log("Ran Session Startup");
             Futile.stage.AddChild(Plugin.darkContainer);
-            if (!Plugin.appliedVignette && ChimericOptions.enableVignette.Value) {
+            if (ChimericOptions.enableVignette == null) {
+                Debug.LogWarning("Vignette Option was null, attempting to give it a band-aid\nCheck Remix Options, or disable and re-enable the mod");
+                try {
+                    ChimericOptions.enableVignette = Plugin.ChimericOptions?.config.Bind("enableVignette", false);
+                }
+                catch {
+                    Debug.LogWarning($"Attempt failed, retrying...");
+                    try {
+                        ChimericOptions.enableVignette = new Configurable<bool>(false);
+                    } catch (Exception err) {
+                        Debug.LogError($"Vignette did not like the band-aid:\n{err}");
+                    }
+                }
+            }
+            if (!Plugin.appliedVignette && ChimericOptions.enableVignette?.Value == true) {
                 Plugin.vignetteEffect = new FSprite("Futile_White", true);
                 Functions.UpdateVignette(new Color(0.5f, 0.5f, 0.55f, defaultVignetteSize), false);  //r & g are the position of the vignette inside the square. b is the intensity/radius and a is the alpha/fade radius
                 Plugin.vignetteEffect.SetPosition(new Vector2(game.rainWorld.screenSize.x/2f, game.rainWorld.screenSize.y/2f));
@@ -34,7 +49,7 @@ namespace Chimeric
         }
         public static void CystsReacts(On.Room.orig_InGameNoise orig, Room self, InGameNoise noise) {
             orig(self, noise);
-            if (self.game.session.characterStats.name.ToString().ToLower() == "slugrot" || !self.game.IsStorySession) {
+            if (self.game.session.characterStats.name.value == Plugin.ROT_NAME || !self.game.IsStorySession) {
                 PhysicalObject source = noise.sourceObject; 
                 //Debug.Log($"{source} and {source.GetType()}");
                 for (int i = 0; i < self.PlayersInRoom.Count; i++) {
@@ -55,7 +70,7 @@ namespace Chimeric
         }
         public static void CystsReacts2(On.VirtualMicrophone.orig_PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool orig, VirtualMicrophone self, SoundID soundID, PositionedSoundEmitter controller, bool loop, float vol, float pitch, bool randomStartPosition) {
             orig(self, soundID, controller, loop, vol, pitch, randomStartPosition);
-            if (self.room != null && (self.room.game.session.characterStats.name.ToString().ToLower() == "slugrot" || !self.room.game.IsStorySession)) {
+            if (self.room != null && (self.room.game.session.characterStats.name.value == Plugin.ROT_NAME || !self.room.game.IsStorySession)) {
                 //Debug.Log($"Volume is: {vol}. Pitch is: {pitch}. SoundID is: {soundID}");
                 if (self.room != null && controller is ChunkSoundEmitter c && c.chunk.owner is Creature) {
                     if (c.chunk.owner is Player p && p is not null && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot) {
