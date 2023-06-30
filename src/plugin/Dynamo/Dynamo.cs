@@ -16,18 +16,23 @@ public partial class Dynamo
         }
     }
     public static CreatureTemplate.Relationship AquaFriendDyno(On.CentipedeAI.orig_IUseARelationshipTracker_UpdateDynamicRelationship orig, CentipedeAI self, RelationshipTracker.DynamicRelationship dRelation) {
-        CreatureTemplate.Relationship relationship = orig(self, dRelation);
         var trackedCreature = dRelation?.trackerRep?.representedCreature?.realizedCreature;
         if ((self.centipede.Template.type == MoreSlugcatsEnums.CreatureTemplateType.AquaCenti || self.centipede.Template.type == CreatureTemplate.Type.Centiwing) && trackedCreature is Player player && Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
             //Debug.Log("Made it to changing relationship");
-            relationship.type = CreatureTemplate.Relationship.Type.Ignores;
-            relationship.intensity = 1f;
-            if (self.centipede?.abstractCreature?.abstractAI?.RealAI?.preyTracker?.currentPrey?.critRep?.representedCreature != null && self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.currentPrey.critRep.representedCreature.realizedCreature == player) {
+            if (self.centipede.abstractCreature?.abstractAI?.RealAI?.preyTracker?.currentPrey?.critRep?.representedCreature != null && self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.currentPrey.critRep.representedCreature.realizedCreature == player) {
                 self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.prey.RemoveAll(c => c.critRep.representedCreature.realizedCreature == player);
                 self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.currentPrey = null;
             }
+            if (self.centipede.grasps != null) {
+                foreach (var grasp in self.centipede.grasps) {
+                    if (grasp != null && grasp.grabbedChunk.owner == player) {
+                        grasp.Release();
+                    }
+                }
+            }
+            return new CreatureTemplate.Relationship(CreatureTemplate.Relationship.Type.Ignores, 1f);
         }
-        return relationship;
+        return orig(self, dRelation);
     }
     public static void FearDyno(On.Creature.orig_Update orig, Creature self, bool eu)
     {
@@ -94,7 +99,14 @@ public partial class Dynamo
         if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isDynamo) {
             #region Swimming Velocity Stuff
             //Debug.Log(something.swimTimer);
-            if (self.animation == Player.AnimationIndex.SurfaceSwim || self.animation == Player.AnimationIndex.DeepSwim) {
+            
+            #region Don't Drown and do have good friction
+            self.airInLungs = 1f;
+            self.swimForce = 0f;
+            self.waterFriction = 0.9f;
+            #endregion
+
+            if (self.animation == Player.AnimationIndex.SurfaceSwim || self.animation == Player.AnimationIndex.DeepSwim || self.submerged) {
                 if (something.timeInWater < 40) {
                     something.timeInWater++;
                 }
@@ -121,17 +133,21 @@ public partial class Dynamo
                 else if (something.swimTimer > 0) {
                     something.swimTimer=0;
                 }
+
                 #region Set stuff to 0 if it's too low
                 if (Mathf.Abs(something.slowX) < 0.1f) {
                     something.slowX = 0;
+                    Debug.Log("Set slowX to 0");
                 }
                 if (Mathf.Abs(something.slowY) < 0.1f) {
                     something.slowY = 0;
+                    Debug.Log("Set slowY to 0");
                 }
                 if (something.swimTimer < 0) {
                     something.swimTimer = 0;
                 }
                 #endregion
+
                 if (self.input[0].x != 0 && (Mathf.Abs(something.slowX) < 1f || (something.prevInput.x==1 && self.input[0].x==-1) || (something.prevInput.x==-1 && self.input[0].x==1))) {
                     something.slowX += self.input[0].x>0? 0.1f : -0.1f * Mathf.Lerp(1f, 6f, Mathf.Abs(something.slowX));
                 }
@@ -157,6 +173,7 @@ public partial class Dynamo
                         //Debug.Log("Reset swimCycle");
                     }
                 }
+
                 #region Set stuff to 1 if it's too high
                 if (Mathf.Abs(something.slowX) > 1) {
                     something.slowX = 1 * Mathf.Sign(something.slowX);
@@ -165,15 +182,11 @@ public partial class Dynamo
                     something.slowY = 1 * Mathf.Sign(something.slowY);
                 }
                 #endregion
+
                 //Debug.Log($"Slow x: {something.slowX} Slow y: {something.slowY}");
-                self.airInLungs = 1f;
-                self.swimForce = 0f;
-                self.waterFriction = 0.9f;
                 Debug.Log($"slowX & slowY: {something.slowX*20f}, {something.slowY*20f} animation: {self.animation.ToString()} timeInWater: {something.timeInWaterUpTo80/80f} Multiple: {Mathf.Pow(something.swimTimer/6.25f, 2) + 1}");
-                if (self.room.FloatWaterLevel(self.mainBodyChunk.pos.x) > self.mainBodyChunk.pos.y + 6.25f) {
-                    self.mainBodyChunk.vel = new Vector2(something.slowX*20*(something.timeInWaterUpTo80/80f),something.slowY*20*(something.timeInWaterUpTo80/80f)) * (Mathf.Pow(something.swimTimer/6.25f, 2) + 1);
-                    Debug.Log($"Result: {new Vector2(something.slowX*20*(something.timeInWaterUpTo80/80f),something.slowY*20*(something.timeInWaterUpTo80/80f)) * (Mathf.Pow(something.swimTimer/6.25f, 2) + 1)}\n");
-                }
+                self.mainBodyChunk.vel = new Vector2(something.slowX*20*(something.timeInWaterUpTo80/80f),something.slowY*20*(something.timeInWaterUpTo80/80f)) * (Mathf.Pow(something.swimTimer/6.25f, 2) + 1);
+                Debug.Log($"Result: {self.mainBodyChunk.vel}\n");
             }
             if (!self.submerged) {
                 something.swimTimer = 0;
