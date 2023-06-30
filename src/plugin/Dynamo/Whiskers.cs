@@ -170,7 +170,7 @@ namespace Chimeric
                             sLeaser.sprites[something.initialFinSprite + i + j].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
                         }
                         else if (!PlayerGraphics.CustomColorsEnabled()) {
-                            SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == "dynamo").ToList()[0], out SlugBaseCharacter chara);
+                            SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.DYNAMO_NAME).ToList()[0], out SlugBaseCharacter chara);
                             SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
                             col = colors[2].GetColor(self.player.playerState.playerNumber);
                         }

@@ -32,7 +32,7 @@ public partial class Dynamo
     public static void FearDyno(On.Creature.orig_Update orig, Creature self, bool eu)
     {
         orig(self, eu);
-        if (self.room?.game?.StoryCharacter?.value == "dynamo" && self != null && self.abstractCreature != null && self.abstractCreature.abstractAI != null && self.abstractCreature.abstractAI.RealAI != null && self.room != null && self.abstractCreature.abstractAI.RealAI is IUseARelationshipTracker) {
+        if (self.room?.game?.StoryCharacter?.value == Plugin.DYNAMO_NAME && self != null && self.abstractCreature != null && self.abstractCreature.abstractAI != null && self.abstractCreature.abstractAI.RealAI != null && self.room != null && self.abstractCreature.abstractAI.RealAI is IUseARelationshipTracker) {
             for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
                 Creature crit = self.room.abstractRoom.creatures[i].realizedCreature;
                 float randNum = Random.Range(0, 201);
@@ -193,6 +193,8 @@ public partial class Dynamo
                 self.animation = Player.AnimationIndex.Roll;
                 self.bodyChunks[0].vel.x = 8.75f * self.flipDirection;
                 self.bodyChunks[1].vel.x = 8.75f * self.flipDirection;
+                PlayerGraphics gModule = ((PlayerGraphics)self.graphicsModule);
+                gModule.tail[gModule.tail.Length-1].vel += new Vector2(-16f * self.flipDirection, -34f);
                 something.crawlToRoll = false;
             }
             #endregion
@@ -200,6 +202,7 @@ public partial class Dynamo
 
         orig(self, eu);
         if (something.isDynamo) {
+            //Debug.Log($"Roll: {self.superLaunchJump}");   //ITS SUPERLAUNCHJUMP DAMNIT
             if (!self.submerged && startSubmerged) {
                 Debug.Log("Lol I stopped the veolcity, how goofy what a goofy thing I just did there guys lmao");
                 something.slowX = 0;
@@ -217,14 +220,17 @@ public partial class Dynamo
             //Debug.Log($"Is it this? {self.superLaunchJump}");
             if (self.bodyMode == Player.BodyModeIndex.Crawl && ((self.superLaunchJump >= 1 && self.input[0].y < 0) || something.crawlToRoll) /*&& self.input[0].x == 0*/) {
                 something.crawlToRoll = true;
-                //self.superLaunchJump = 20;
+                self.superLaunchJump = 20;
+            }
+            else if (self.bodyMode != Player.BodyModeIndex.Crawl && (self.bodyMode == Player.BodyModeIndex.Stand || self.bodyMode == Player.BodyModeIndex.ClimbingOnBeam || self.bodyMode == Player.BodyModeIndex.CorridorClimb || self.bodyMode == Player.BodyModeIndex.ClimbIntoShortCut)) {
+                something.crawlToRoll = false;
             }
         }
     }
     public static void DynoUpdateBodyMode(On.Player.orig_UpdateBodyMode orig, Player self) {
         orig(self);
         if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isDynamo) {
-            if (self.animation.value.ToLower() == "roll") {
+            if (self.animation == Player.AnimationIndex.Roll) {
                 if (self.rollCounter <= 10) {
                     self.bodyChunks[0].vel *= 0.8f;
                     self.bodyChunks[1].vel *= 0.8f;

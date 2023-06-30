@@ -15,6 +15,8 @@ using System.IO;
 using MonoMod.RuntimeDetour;
 using static System.Reflection.BindingFlags;
 using System.Diagnostics.CodeAnalysis;
+using Menu;
+using SlugBase;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -36,6 +38,8 @@ namespace Chimeric
         public static ChimericOptions? ChimericOptions;
         bool configWorking = false;
         public static bool loaded = false;
+        public const string ROT_NAME = "slugrot";
+        public const string DYNAMO_NAME = "dynamo";
         public void OnEnable()
         {
             ConversationOverrides.Hooks();  // Won't do anything until the bool in the slugbase json is changed to true
@@ -55,6 +59,15 @@ namespace Chimeric
 
                 }
             };
+
+            // Can be used to change sleep screen stuff, may end up using this later
+            /*On.Menu.MenuScene.BuildScene += (orig, self) => {
+                orig(self);
+                if (self.sceneID == MenuScene.SceneID.SleepScreen)
+                {
+                    self.depthIllustrations[3] = new Menu.MenuDepthIllustration(self.menu, self, "Scenes" + Path.DirectorySeparatorChar.ToString() + "Sleep Screen - white", "Sleep - 2 - white", new Vector2(0f, 0f), 1.7f, Menu.MenuDepthIllustration.MenuShader.Normal);
+                }
+            };*/
 
             ConversationID.RegisterValues();
 
@@ -277,10 +290,10 @@ namespace Chimeric
             orig(self, abstractCreature, world);
             Plugin.tenticleStuff.Add(self, new PlayerEx());
             Plugin.tenticleStuff.TryGetValue(self, out var something);
-            if (self.slugcatStats.name.ToString() == "slugrot") {
+            if (self.slugcatStats.name.value == ROT_NAME) {
                 something.isRot = true;
             }
-            else if (self.slugcatStats.name.ToString() == "dynamo") {
+            else if (self.slugcatStats.name.ToString() == DYNAMO_NAME) {
                 something.isDynamo = true;
             }
             else if (self.slugcatStats.name.ToString() == "nine") {

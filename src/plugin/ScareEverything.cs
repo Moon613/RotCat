@@ -3,7 +3,7 @@ public class ScareEverything {
     public static float intensity = 1f;     // this will be clamped to a 0-1 range, 1 influencing decision-making the most and 0 not at all
     ///<summary>This function makes setting the condition under which creatures will change their relation easier</summary>
     public static bool Condition(Creature? crit) {
-        if (crit != null && crit.Template.type == CreatureTemplate.Type.Slugcat && crit is Player player && player.slugcatStats.name.value == "slugrot") {  // change the 'Slugcat' part into any creature template you want the creatures to be afraid of
+        if (crit != null && crit.Template.type == CreatureTemplate.Type.Slugcat && crit is Player player && player.slugcatStats.name.value == "white") {  // change the 'white' part into any creature template you want the creatures to be afraid of
                                                                                             // you can also replace or add to this with your own checks where it's used if you want
             return true;
         }

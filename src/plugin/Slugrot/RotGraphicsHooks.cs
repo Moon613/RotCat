@@ -18,7 +18,7 @@ namespace Chimeric
                     something.rotEyeColor = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
                 }
                 else if (!PlayerGraphics.CustomColorsEnabled()) {
-                    SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == "slugrot").ToList()[0], out SlugBaseCharacter chara);
+                    SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.ROT_NAME).ToList()[0], out SlugBaseCharacter chara);
                     SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
                     something.rotEyeColor = colors[2].GetColor(self.player.playerState.playerNumber);
                 }
@@ -77,7 +77,7 @@ namespace Chimeric
             orig(self, sLeaser, rCam, timeStacker, camPos);
             Plugin.tenticleStuff.TryGetValue(self.player, out var something);
             if (something.isRot) {
-                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == "slugrot") {
+                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == Plugin.ROT_NAME) {
                     Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, Plugin.vignetteEffect.color, camPos);
                 }
                 //base.Logger.LogDebug(self.player.flipDirection);
