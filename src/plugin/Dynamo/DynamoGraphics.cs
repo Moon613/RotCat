@@ -18,6 +18,10 @@ namespace Chimeric
             orig(self, sLeaser, rCam, timeStacker, camPos);
             if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
                 //Debug.Log($"{sLeaser.sprites[3].color.ToString()}");
+                if (something.crawlToRoll) {
+                    sLeaser.sprites[1].SetPosition(new Vector2(self.player.bodyChunks[1].pos.x + (5f * self.player.flipDirection), self.player.bodyChunks[1].pos.y + 4.5f) - camPos);
+                }
+                
                 for (int i = 0; i < something.fList.Count; i++) {
                     //Debug.Log($"{sLeaser.sprites?[something.initialFinSprite + i]} and {sLeaser.sprites?[0]}");
                     //Debug.Log(self.player.bodyChunks[0].Rotation);
@@ -44,13 +48,13 @@ namespace Chimeric
                     if (self.useJollyColor) {
                         sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
                     }
-                    else if (!PlayerGraphics.CustomColorsEnabled()) {
-                        SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == "dynamo").ToList()[0], out SlugBaseCharacter chara);
-                        SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
-                        sLeaser.sprites[something.initialFinSprite + i].color = colors[2].GetColor(self.player.playerState.playerNumber);
-                    }
                     else if (PlayerGraphics.CustomColorsEnabled()) {
                         sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.CustomColorSafety(2);
+                    }
+                    else if (!PlayerGraphics.CustomColorsEnabled()) {
+                        SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.DYNAMO_NAME).ToList()[0], out SlugBaseCharacter chara);
+                        SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
+                        sLeaser.sprites[something.initialFinSprite + i].color = colors[2].GetColor(self.player.playerState.playerNumber);
                     }
                     #endregion
                     
@@ -67,7 +71,7 @@ namespace Chimeric
             if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
                 //Debug.Log(self.player.bodyChunks[0].pos.y - self.player.bodyChunks[1].pos.y);
                 //Debug.Log(self.player.animation.ToString().ToLower());
-                if (self.player.input[0].pckp && self.player.bodyChunks[0].pos.y <= self.player.bodyChunks[1].pos.y+11f && self.player.bodyChunks[0].pos.y >= self.player.bodyChunks[1].pos.y-11f && self.player.animation.ToString().ToLower() == "none" && self.player.bodyMode == Player.BodyModeIndex.Crawl) {
+                if (self.player.input[0].pckp && self.player.bodyChunks[0].pos.y <= self.player.bodyChunks[1].pos.y+11f && self.player.bodyChunks[0].pos.y >= self.player.bodyChunks[1].pos.y-11f && self.player.animation == Player.AnimationIndex.None && self.player.bodyMode == Player.BodyModeIndex.Crawl) {
                     if (self.tail[self.tail.Length-1].pos.y <= self.player.bodyChunks[1].pos.y+40f) {
                         self.tail[self.tail.Length-1].vel.y = 3f;
                     }
@@ -113,9 +117,16 @@ namespace Chimeric
                     }
                 }
                 
+                #region Roll From Crouch Indication
+                if (something.crawlToRoll)
+                {
+                    self.tail[self.tail.Length - 1].vel = Custom.DirVec(self.tail[self.tail.Length - 1].pos, self.player.bodyChunks[1].pos + new Vector2(35f * -self.player.flipDirection, 24f));
+                    self.player.allowRoll = 20;
+                }
+                #endregion
+                
                 #region Roll Animation for tail
                 if (self.player.animation == Player.AnimationIndex.Roll) {
-                    Vector2 increment = new Vector2(0, 0f);
                     for (int i = 0; i < self.tail.Length; i++)
                     {
                         if (i != 0) {
@@ -123,18 +134,18 @@ namespace Chimeric
                             startVel += 45f * -self.player.flipDirection;
                             self.tail[i].vel = Custom.DegToVec(startVel) * 15f;
                         }
-                        //self.tail[i].pos = Functions.RotateAroundPoint(self.tail[0].pos, increment, (i==0?0:1) * (-(Custom.VecToDeg(self.player.bodyChunks[0].Rotation)+(i*6f*-self.player.flipDirection))-(90f*-self.player.flipDirection)));
-                        //increment += new Vector2(0, -7.25f);
                     }
                     for (int i = 0; i < self.player.room.abstractRoom.creatures.Count; i++) {
                         var crit = self.player.room.abstractRoom.creatures[i].realizedCreature;
-                        if (Custom.DistLess(crit.mainBodyChunk.pos, self.tail[self.tail.Length-2].pos, 55f) && crit != self.player) {
-                            var prevState = crit.State;
-                            crit.Violence(self.player.mainBodyChunk, null, crit.mainBodyChunk, null, Creature.DamageType.Blunt, 0.4f, 60f);
-                            crit.SetKillTag(self.player.abstractCreature);
-                            crit.mainBodyChunk.vel += new Vector2(ChimericOptions.yeetusMagnitude.Value*self.player.flipDirection, 19f);
-                            Debug.Log($"{crit.Template.type} was launched by Dynamo");
-                            //Debug.Log($"{crit.mainBodyChunk.mass} and {crit.mainBodyChunk.vel}");
+                        foreach (var chunk in crit.bodyChunks) {
+                            if (Custom.DistLess(chunk.pos, self.tail[self.tail.Length - 2].pos, 55f) && crit != self.player) {
+                                var prevState = crit.State;
+                                crit.Violence(self.player.mainBodyChunk, null, chunk, null, Creature.DamageType.Blunt, 0.4f, 100f);
+                                crit.SetKillTag(self.player.abstractCreature);
+                                chunk.vel += new Vector2(ChimericOptions.yeetusMagnitude.Value * self.player.flipDirection, 19f) / (chunk.mass * 3f);
+                                Debug.Log($"{crit.Template.type} was launched by Dynamo");
+                                Debug.Log($"{chunk.mass} and {chunk.vel}");
+                            }
                         }
                     }
                 }
