@@ -104,8 +104,10 @@ public partial class Dynamo
             self.airInLungs = 1f;
             self.swimForce = 0f;
             self.waterFriction = 0.9f;
+            self.buoyancy = 0f;
             #endregion
 
+            #region Counters lmao
             if (self.animation == Player.AnimationIndex.SurfaceSwim || self.animation == Player.AnimationIndex.DeepSwim || self.submerged) {
                 if (something.timeInWater < 40) {
                     something.timeInWater++;
@@ -122,16 +124,24 @@ public partial class Dynamo
                     something.timeInWaterUpTo80 = 0;
                 }
             }
+            foreach (Fin fin in something.fList)
+                if (self.bodyMode == Player.BodyModeIndex.CorridorClimb && fin.corriderTimer < 20f) {
+                    fin.corriderTimer++;
+                }
+                else if (self.bodyMode != Player.BodyModeIndex.CorridorClimb && fin.corriderTimer > 0f) {
+                    fin.corriderTimer--;
+                }
+            #endregion
+
             if (self.animation == Player.AnimationIndex.SurfaceSwim && !self.input[1].jmp && self.input[0].jmp) {
-                self.mainBodyChunk.vel.y += 20f;
+                self.mainBodyChunk.vel.y += 18f;
             }
             if (self.submerged) {
-                //self.buoyancy = -10f;
                 if ((self.input[0].x != 0 || self.input[0].y != 0) && something.swimTimer < 8) {
                     something.swimTimer+=2;
                 }
                 else if (something.swimTimer > 0) {
-                    something.swimTimer=0;
+                    something.swimTimer = 0;
                 }
 
                 #region Set stuff to 0 if it's too low
@@ -183,7 +193,6 @@ public partial class Dynamo
                 }
                 #endregion
 
-                //Debug.Log($"Slow x: {something.slowX} Slow y: {something.slowY}");
                 Debug.Log($"slowX & slowY: {something.slowX*20f}, {something.slowY*20f} animation: {self.animation.ToString()} timeInWater: {something.timeInWaterUpTo80/80f} Multiple: {Mathf.Pow(something.swimTimer/6.25f, 2) + 1}");
                 self.mainBodyChunk.vel = new Vector2(something.slowX*20*(something.timeInWaterUpTo80/80f),something.slowY*20*(something.timeInWaterUpTo80/80f)) * (Mathf.Pow(something.swimTimer/6.25f, 2) + 1);
                 Debug.Log($"Result: {self.mainBodyChunk.vel}\n");

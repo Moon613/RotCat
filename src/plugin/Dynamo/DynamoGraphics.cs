@@ -26,13 +26,13 @@ namespace Chimeric
                     //Debug.Log($"{sLeaser.sprites?[something.initialFinSprite + i]} and {sLeaser.sprites?[0]}");
                     //Debug.Log(self.player.bodyChunks[0].Rotation);
                     if (something.fList[i].connectedSprite != null) {
-                        sLeaser.sprites[something.initialFinSprite + i].SetPosition(Functions.RotateAroundPoint(something.fList[i].connectedSprite.GetPosition(), something.fList[i].posOffset, (something.fList[i].connectedSprite == sLeaser.sprites[3]? something.fList[i].connectedSprite.rotation*-1 : something.fList[i].connectedSprite.rotation*-1)));
+                        sLeaser.sprites[something.initialFinSprite + i].SetPosition(Functions.RotateAroundPoint(something.fList[i].connectedSprite.GetPosition(), something.fList[i].posOffset, (-something.fList[i].connectedSprite.rotation)));
 
                         sLeaser.sprites[something.initialFinSprite + i].rotation = something.fList[i].connectedSprite.rotation+90-(something.fList[i].additionalRotation * (something.fList[i].flipped? -1f : 1f)) * (something.fList[i].connectedSprite == sLeaser.sprites[3]? 1f : -1f);
                     }
                     else if (something.fList[i].connectedTailSegment?.connectedSegment != null) {
-                        sLeaser.sprites[something.initialFinSprite + i].SetPosition(Functions.RotateAroundPoint(something.fList[i].connectedTailSegment.pos-camPos, something.fList[i].posOffset, -Custom.VecToDeg((something.fList[i].connectedTailSegment.pos-something.fList[i].connectedTailSegment.connectedSegment.pos).normalized)));
-
+                        sLeaser.sprites[something.initialFinSprite + i].SetPosition(Vector2.Lerp(Functions.RotateAroundPoint(something.fList[i].connectedTailSegment.lastPos-camPos, something.fList[i].posOffset, -Custom.VecToDeg((something.fList[i].connectedTailSegment.lastPos-something.fList[i].connectedTailSegment.connectedSegment.lastPos).normalized)), Functions.RotateAroundPoint(something.fList[i].connectedTailSegment.pos-camPos, something.fList[i].posOffset, -Custom.VecToDeg((something.fList[i].connectedTailSegment.pos-something.fList[i].connectedTailSegment.connectedSegment.pos).normalized)), timeStacker));
+                            
                         sLeaser.sprites[something.initialFinSprite + i].rotation = Custom.VecToDeg((something.fList[i].connectedTailSegment.pos-something.fList[i].connectedTailSegment.connectedSegment.pos).normalized * -1)-90-(something.fList[i].additionalRotation * (something.fList[i].flipped? 1f : -1f));
                     }
                     //This is mostly unused, will have to update it I ever use it
@@ -59,8 +59,12 @@ namespace Chimeric
                     #endregion
                     
                     float addition = self.player.submerged? Mathf.Lerp(something.fList[i].swimRange[0], something.fList[i].swimRange[1], Mathf.Sin(something.fList[i].swimCycle)) : 0;
-                    //Debug.Log($"addition is: {addition} and {something.fList[i].swimRange[0]} and {something.fList[i].swimRange[1]} and {Mathf.Sin(something.swimCycle)}");
+                    //Debug.Log($"addition is: {addition} and {something.fList[i].swimRange[0]} and {something.fList[i].swimRange[1]} and {Mathf.Sin(something.fList[i].swimCycle)}");
                     something.fList[i].additionalRotation = Mathf.Lerp(something.fList[i].foldRotation, something.fList[i].startAdditionalRotation, (float)something.timeInWater/40f) + addition;
+                    
+                    if (something.fList[i].corriderTimer > 0) {
+                        something.fList[i].additionalRotation = Mathf.Lerp(something.fList[i].foldRotation, -89.5f, something.fList[i].corriderTimer/20f);
+                    }
                     //Debug.Log($"startAdditionalRotation: {something.fList[i].startAdditionalRotation} additionalRotation: {something.fList[i].additionalRotation} timeInWater: {something.timeInWater} normal rotation: {sLeaser.sprites[something.initialFinSprite+i].rotation}");
                 }
             }
@@ -125,7 +129,7 @@ namespace Chimeric
                 }
                 #endregion
                 
-                #region Roll Animation for tail
+                #region Roll Animation for tail and killing things
                 if (self.player.animation == Player.AnimationIndex.Roll) {
                     for (int i = 0; i < self.tail.Length; i++)
                     {

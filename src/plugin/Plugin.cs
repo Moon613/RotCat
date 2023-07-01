@@ -919,8 +919,7 @@ namespace Chimeric
                 this.swimRange = new List<float>(){0, 0};
             }
             else if (swimRange != null) {
-                this.swimRange.Add(swimRange[0]);
-                this.swimRange.Add(swimRange[1]);
+                this.swimRange.AddRange(swimRange);
             }
             this.swimCycle = swimCycle;
             this.startSwimCycle = startSwimCycle;
@@ -937,6 +936,7 @@ namespace Chimeric
         public List<float> swimRange = new List<float>{};
         public float swimCycle;
         public float startSwimCycle;
+        public float corriderTimer;
     }
     public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStick
     {
