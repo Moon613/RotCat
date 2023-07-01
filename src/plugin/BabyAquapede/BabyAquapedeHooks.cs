@@ -50,14 +50,14 @@ namespace Chimeric
                         float b2 = Mathf.InverseLerp(0.85f, 1f, Vector2.Dot(lhs2, Custom.DegToVec(45f))) * Mathf.Abs(Vector2.Dot(Custom.DegToVec(45f + Custom.VecToDeg(vector12)), -vector10));
                         num12 = Mathf.Pow(Mathf.Max(num12, b2), 0.5f);
                         float d7 = 1.75f;
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).MoveVertice(1, vector13 + vector10 * d7 - camPos);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).MoveVertice(0, vector13 - vector10 * d7 - camPos);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).MoveVertice(2, vector14 + vector10 * d7 - camPos);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).MoveVertice(3, vector14 - vector10 * d7 - camPos);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).verticeColors[0] = Custom.HSL2RGB(0.99f - 0.4f * Mathf.Pow(num12, 2f), 1f, 0.5f + 0.5f * num12, 0.5f + 0.5f * num12);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).verticeColors[1] = Custom.HSL2RGB(0.99f - 0.4f * Mathf.Pow(num12, 2f), 1f, 0.5f + 0.5f * num12, 0.5f + 0.5f * num12);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).verticeColors[2] = Color.Lerp(new Color(self.blackColor.r, self.blackColor.g, self.blackColor.b), new Color(1f, 1f, 1f), 0.5f * num12);
-                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite).verticeColors[3] = Color.Lerp(new Color(self.blackColor.r, self.blackColor.g, self.blackColor.b), new Color(1f, 1f, 1f), 0.5f * num12);
+                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite)?.MoveVertice(1, vector13 + vector10 * d7 - camPos);
+                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite)?.MoveVertice(0, vector13 - vector10 * d7 - camPos);
+                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite)?.MoveVertice(2, vector14 + vector10 * d7 - camPos);
+                        (sLeaser.sprites[self.WingSprite(i, k)] as CustomFSprite)?.MoveVertice(3, vector14 - vector10 * d7 - camPos);
+                        ((CustomFSprite)sLeaser.sprites[self.WingSprite(i, k)]).verticeColors[0] = Custom.HSL2RGB(0.99f - 0.4f * Mathf.Pow(num12, 2f), 1f, 0.5f + 0.5f * num12, 0.5f + 0.5f * num12);
+                        ((CustomFSprite)sLeaser.sprites[self.WingSprite(i, k)]).verticeColors[1] = Custom.HSL2RGB(0.99f - 0.4f * Mathf.Pow(num12, 2f), 1f, 0.5f + 0.5f * num12, 0.5f + 0.5f * num12);
+                        ((CustomFSprite)sLeaser.sprites[self.WingSprite(i, k)]).verticeColors[2] = Color.Lerp(new Color(self.blackColor.r, self.blackColor.g, self.blackColor.b), new Color(1f, 1f, 1f), 0.5f * num12);
+                        ((CustomFSprite)sLeaser.sprites[self.WingSprite(i, k)]).verticeColors[3] = Color.Lerp(new Color(self.blackColor.r, self.blackColor.g, self.blackColor.b), new Color(1f, 1f, 1f), 0.5f * num12);
                     }
                 }
             }
