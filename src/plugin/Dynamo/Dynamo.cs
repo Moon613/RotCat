@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using MoreSlugcats;
 using static RelationshipTracker;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 
 namespace Chimeric;
 
@@ -104,7 +106,7 @@ public partial class Dynamo
             self.airInLungs = 1f;
             self.swimForce = 0f;
             self.waterFriction = 0.9f;
-            self.buoyancy = 0f;
+            self.buoyancy = 0.9f;
             #endregion
 
             #region Counters lmao
@@ -266,5 +268,40 @@ public partial class Dynamo
                 }
             }
         }
+    }
+    public static void DynamoCanEatUnderwater(ILContext il) {
+        var cursor = new ILCursor(il);
+        var label = il.DefineLabel();
+        var start = cursor.Index;
+
+        if (!cursor.TryGotoNext(MoveType.After, 
+            i => i.MatchCall<Player>("get_isRivulet"))) {
+            return;
+        }
+        if (!cursor.TryGotoNext(MoveType.Before,
+            i => i.MatchLdcI4(1))) {
+            return;
+        }
+        cursor.MarkLabel(label);
+        cursor.Index = start;
+
+        if (!cursor.TryGotoNext(MoveType.After,
+            i => i.MatchCall<Player>("get_isRivulet"))) {
+            return;
+        }
+        if (!cursor.TryGotoPrev(MoveType.Before, 
+            i => i.MatchLdarg(0))) {
+            return;
+        }
+
+        cursor.Emit(OpCodes.Ldarg_0);
+        cursor.EmitDelegate((Player player) => {
+            if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
+                Debug.Log("Doing things!");
+                return true;
+            }
+            return false;
+        });
+        cursor.Emit(OpCodes.Brtrue_S, label);
     }
 }

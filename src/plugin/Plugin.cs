@@ -164,6 +164,8 @@ namespace Chimeric
 
             DynamoWhiskers.Hooks();
 
+            IL.Player.GrabUpdate += Dynamo.DynamoCanEatUnderwater;
+
             On.Menu.Remix.MixedUI.OpTab.ctor += (orig, self, owner, name) => {
                 orig(self, owner, name);
                 if (name == "Slugrot") {
