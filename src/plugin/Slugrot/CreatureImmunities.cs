@@ -3,6 +3,13 @@ using MoreSlugcats;
 namespace Chimeric
 {
     public class CreatureImmunities {
+        public static void Apply() {
+            On.DaddyAI.IUseARelationshipTracker_UpdateDynamicRelationship += DaddyAIImmune;
+            //On.DaddyAI.Update += DaddyAIImmune2;
+            On.DaddyTentacle.Update += DaddyTentacleImmune;
+            On.DaddyCorruption.LittleLeg.Update += WallCystImmune1;
+            On.DaddyCorruption.Update += WallCystImmune2;
+        }
         public static CreatureTemplate.Relationship DaddyAIImmune(On.DaddyAI.orig_IUseARelationshipTracker_UpdateDynamicRelationship orig, DaddyAI self, RelationshipTracker.DynamicRelationship dRelation) {
             CreatureTemplate.Relationship relationship = orig(self, dRelation);
             Creature? trackedCreature = dRelation?.trackerRep?.representedCreature?.realizedCreature;

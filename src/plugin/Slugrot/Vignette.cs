@@ -9,6 +9,15 @@ namespace Chimeric
 {
     public class Vignette
     {
+        public static void Apply() {
+            On.GameSession.ctor += GameSessionStartup;
+            On.RainWorldGame.ExitToMenu += QuitModeBackToMenu;
+            On.Room.InGameNoise += CystsReacts;
+            On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += CystsReacts2;
+            On.Creature.SuckedIntoShortCut += RotCatSuckIntoShortcut;
+            On.Creature.SpitOutOfShortCut += RotCatSpitOutOfShortcut;
+            On.Menu.SleepAndDeathScreen.ctor += CleanDarkContainerOnSleepAndDeathScreen;
+        }
         public static float defaultVignetteSize = 0.7f;
         public static void GameSessionStartup(On.GameSession.orig_ctor orig, GameSession self, RainWorldGame game) {
             orig(self, game);
@@ -103,9 +112,6 @@ namespace Chimeric
             Plugin.darkContainer.RemoveAllChildren();
             Futile.stage.RemoveChild(Plugin.darkContainer);
             Plugin.appliedVignette = false;
-        }
-        public static void GameOver(On.Player.orig_Die orig, Player self) {
-            orig(self);
         }
         public static bool CalculateMod5PlusMinus1(int num) {
             if (num%5==0 || (num-1)%5==0 || (num+1)%5==0) {

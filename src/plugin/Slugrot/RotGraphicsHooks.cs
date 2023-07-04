@@ -7,6 +7,11 @@ using System.Linq;
 namespace Chimeric
 {
     public static class RotGraphicsHooks {
+        public static void Apply() {
+            On.PlayerGraphics.InitiateSprites += RotGraphicsHooks.RotInitiateSprites;
+            On.PlayerGraphics.DrawSprites += RotGraphicsHooks.RotDrawSprites;
+            On.PlayerGraphics.AddToContainer += RotGraphicsHooks.RotAddToContainer;
+        }
         public static void RotInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) {
             //base.Logger.LogDebug("Initiating Sprites");
             orig(self, sLeaser, rCam);

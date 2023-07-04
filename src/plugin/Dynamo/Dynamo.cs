@@ -11,11 +11,22 @@ namespace Chimeric;
 
 public partial class Dynamo
 {
+    public static void Apply() {
+        On.Player.Update += DynoUpdate;
+        On.PlayerGraphics.ctor += DynoGrafCtor;
+        On.PlayerGraphics.InitiateSprites += DynoInitSprites;
+        On.PlayerGraphics.DrawSprites += DynoGrafDrawSprites;
+        On.PlayerGraphics.Update += DynoGrafUpdate;
+        IL.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSpritesTail;
+        On.Creature.Update += FearDyno;
+        On.PlayerGraphics.AddToContainer += DynoAddToContainer;
+        On.CentipedeAI.IUseARelationshipTracker_UpdateDynamicRelationship += AquaFriendDyno;
+        On.Player.UpdateBodyMode += DynoUpdateBodyMode;
+        IL.Player.GrabUpdate += DynamoCanEatUnderwater;
+    }
     public static void DynoCtor(Player self, PlayerEx something)
     {
-        if (something.isDynamo) {
-            //self.slugcatStats.lungsFac = 0.000000001f;
-        }
+        self.slugcatStats.runspeedFac = 0.95f;
     }
     public static CreatureTemplate.Relationship AquaFriendDyno(On.CentipedeAI.orig_IUseARelationshipTracker_UpdateDynamicRelationship orig, CentipedeAI self, RelationshipTracker.DynamicRelationship dRelation) {
         var trackedCreature = dRelation?.trackerRep?.representedCreature?.realizedCreature;
@@ -272,16 +283,20 @@ public partial class Dynamo
     public static void DynamoCanEatUnderwater(ILContext il) {
         var cursor = new ILCursor(il);
         var label = il.DefineLabel();
-        var start = cursor.Index;
+        var start = cursor.Index;   // Store the start index of the cursor
 
+        // Move after the first call to the isRivulet property
         if (!cursor.TryGotoNext(MoveType.After, 
             i => i.MatchCall<Player>("get_isRivulet"))) {
             return;
         }
+        // Now go to right before the instruction that marks a true value
         if (!cursor.TryGotoNext(MoveType.Before,
             i => i.MatchLdcI4(1))) {
             return;
         }
+
+        // aaaaand save it's location in the label created previously, then go back to the start
         cursor.MarkLabel(label);
         cursor.Index = start;
 
@@ -294,6 +309,7 @@ public partial class Dynamo
             return;
         }
 
+        // Grab the player from the top of the stack, and evaluate if it is Dynamo
         cursor.Emit(OpCodes.Ldarg_0);
         cursor.EmitDelegate((Player player) => {
             if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
@@ -302,6 +318,8 @@ public partial class Dynamo
             }
             return false;
         });
+
+        // Now, if the scug is Rivulet OR Dynamo, the cursor moves to the label, so Dynamo can eat underwater (among a few other unknown things I think)
         cursor.Emit(OpCodes.Brtrue_S, label);
     }
 }

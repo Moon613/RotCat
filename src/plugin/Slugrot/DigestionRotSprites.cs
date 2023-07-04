@@ -7,6 +7,15 @@ namespace Chimeric
 {
     public class DigestionRotSprites
     {
+        public static void Apply() {
+            On.Creature.ctor += AddCWTToCreature;
+            On.Player.EatMeatUpdate += PlayerEatsCreature;
+            On.Player.TossObject += TossAndRemoveCreature;
+            On.GraphicsModule.DrawSprites += DrawRotYumSprites;
+            On.Creature.SpitOutOfShortCut += ReassignRotSprites;
+            On.Creature.SuckedIntoShortCut += SuckIntoPipe;
+            IL.Player.EatMeatUpdate += ReplaceEatingSound;
+        }
         ///<summary>Gives each creature a CWT to hold info on the rot sprites upon creation</summary>
         public static void AddCWTToCreature(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
         {

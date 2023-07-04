@@ -43,7 +43,31 @@ namespace Chimeric
         public void OnEnable()
         {
             ConversationOverrides.Hooks();  // Won't do anything until the bool in the slugbase json is changed to true
+            ConversationID.RegisterValues();
+            SoundEnums.RegisterValues();
+            Content.Register(new BabyAquapede());
+            On.RainWorld.OnModsInit += OnModsInit;
+            CreatureImmunities.Apply();
+            RotGraphicsHooks.Apply();
+            Vignette.Apply();
+            DigestionRotSprites.Apply();
+            CalmTentacles.Apply();
+            SlugRot.Apply();
+            Dynamo.Apply();
+            DynamoWhiskers.Hooks();
+            On.Player.ctor += PlayerCtor;
 
+            
+
+            // Can be used to change sleep screen stuff, may end up using this later
+            /*On.Menu.MenuScene.BuildScene += (orig, self) => {
+                orig(self);
+                if (self.sceneID == MenuScene.SceneID.SleepScreen)
+                {
+                    self.depthIllustrations[3] = new Menu.MenuDepthIllustration(self.menu, self, "Scenes" + Path.DirectorySeparatorChar.ToString() + "Sleep Screen - white", "Sleep - 2 - white", new Vector2(0f, 0f), 1.7f, Menu.MenuDepthIllustration.MenuShader.Normal);
+                }
+            };*/
+            
             On.RainWorld.LoadResources += (orig, self) => {
                 orig(self);
                 if (!loaded)
@@ -56,60 +80,8 @@ namespace Chimeric
                         Debug.Log("Shitfuckfcukdamnitnotagain");
                     }
                     loaded = true;
-
                 }
             };
-
-            // Can be used to change sleep screen stuff, may end up using this later
-            /*On.Menu.MenuScene.BuildScene += (orig, self) => {
-                orig(self);
-                if (self.sceneID == MenuScene.SceneID.SleepScreen)
-                {
-                    self.depthIllustrations[3] = new Menu.MenuDepthIllustration(self.menu, self, "Scenes" + Path.DirectorySeparatorChar.ToString() + "Sleep Screen - white", "Sleep - 2 - white", new Vector2(0f, 0f), 1.7f, Menu.MenuDepthIllustration.MenuShader.Normal);
-                }
-            };*/
-
-            ConversationID.RegisterValues();
-
-            SoundEnums.RegisterValues();
-
-            Content.Register(new BabyAquapede());
-
-            On.RainWorld.OnModsInit += OnModsInit;
-            
-            On.Player.NewRoom += CalmTentacles.CalmNewRoom;
-
-            On.DaddyAI.IUseARelationshipTracker_UpdateDynamicRelationship += CreatureImmunities.DaddyAIImmune;
-
-            //On.DaddyAI.Update += CreatureImmunities.DaddyAIImmune2;
-
-            On.DaddyTentacle.Update += CreatureImmunities.DaddyTentacleImmune;
-
-            On.DaddyCorruption.LittleLeg.Update += CreatureImmunities.WallCystImmune1;
-
-            On.DaddyCorruption.Update += CreatureImmunities.WallCystImmune2;
-
-            On.PlayerGraphics.AddToContainer += RotGraphicsHooks.RotAddToContainer;
-
-            On.PlayerGraphics.InitiateSprites += RotGraphicsHooks.RotInitiateSprites;
-
-            On.PlayerGraphics.DrawSprites += RotGraphicsHooks.RotDrawSprites;
-
-            On.Player.SpitOutOfShortCut += CalmTentacles.CalmSpitOutOfShortCut;
-
-            On.GameSession.ctor += Vignette.GameSessionStartup;
-
-            On.RainWorldGame.ExitToMenu += Vignette.QuitModeBackToMenu;
-
-            On.Room.InGameNoise += Vignette.CystsReacts;
-
-            On.Creature.SuckedIntoShortCut += Vignette.RotCatSuckIntoShortcut;
-
-            On.Creature.SpitOutOfShortCut += Vignette.RotCatSpitOutOfShortcut;
-
-            On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += Vignette.CystsReacts2;
-
-            On.Menu.SleepAndDeathScreen.ctor += Vignette.CleanDarkContainerOnSleepAndDeathScreen;
 
             On.Spark.AddToContainer += (orig, self, sLeaser, rCam, newContainer) => {   //Shouldn't ever cause issues, just adds Spark sprites to the darkContainer if they are created by CreaturePing
                 if (sparkLayering.TryGetValue(self, out SparkEx spark) && spark.isHearingSpark) {
@@ -118,54 +90,11 @@ namespace Chimeric
                 orig(self, sLeaser, rCam, newContainer);
             };
 
-            On.Creature.ctor += DigestionRotSprites.AddCWTToCreature;
-
-            On.Player.EatMeatUpdate += DigestionRotSprites.PlayerEatsCreature;
-
-            On.Player.TossObject += DigestionRotSprites.TossAndRemoveCreature;
-
-            On.GraphicsModule.DrawSprites += DigestionRotSprites.DrawRotYumSprites;
-
-            On.Creature.SpitOutOfShortCut += DigestionRotSprites.ReassignRotSprites;
-
-            On.Creature.SuckedIntoShortCut += DigestionRotSprites.SuckIntoPipe;
-
-            IL.Player.EatMeatUpdate += DigestionRotSprites.ReplaceEatingSound;
-
             On.Menu.MainMenu.ctor += (orig, self, manager, showRegionSpecificBkg) => {
                 orig(self, manager, showRegionSpecificBkg);
                 //self.AddMainMenuButton(new Menu.SimpleButton(self, self.pages[0], self.Translate("ROTCAT"), "ROTCAT", Vector2.zero, new Vector2(100f, 30f)), OpenSaysMe, 0);
             };
             
-            On.Player.ctor += PlayerCtor;
-
-            On.Player.Update += SlugRot.PlayerUpdate;
-
-
-            On.Player.Update += Dynamo.DynoUpdate;
-
-            On.PlayerGraphics.ctor += Dynamo.DynoGrafCtor;
-
-            On.PlayerGraphics.InitiateSprites += Dynamo.DynoInitSprites;
-
-            On.PlayerGraphics.DrawSprites += Dynamo.DynoGrafDrawSprites;
-
-            On.PlayerGraphics.Update += Dynamo.DynoGrafUpdate;
-
-            IL.PlayerGraphics.DrawSprites += Dynamo.PlayerGraphics_DrawSpritesTail;
-
-            On.Creature.Update += Dynamo.FearDyno;
-
-            On.PlayerGraphics.AddToContainer += Dynamo.DynoAddToContainer;
-
-            On.CentipedeAI.IUseARelationshipTracker_UpdateDynamicRelationship += Dynamo.AquaFriendDyno;
-
-            On.Player.UpdateBodyMode += Dynamo.DynoUpdateBodyMode;
-
-            DynamoWhiskers.Hooks();
-
-            IL.Player.GrabUpdate += Dynamo.DynamoCanEatUnderwater;
-
             On.Menu.Remix.MixedUI.OpTab.ctor += (orig, self, owner, name) => {
                 orig(self, owner, name);
                 if (name == "Slugrot") {
@@ -178,6 +107,8 @@ namespace Chimeric
                     self._container.AddChild(sprite);
                 }
             };
+
+            //POMDarkness.RegisterDarkness();
 
             #region Don't Mind this lol
             /*On.RoomCamera.ctor += (orig, self, game, cameraNumber) => {   //Leftover from when I was doing a slight amount of trolling :3
@@ -294,21 +225,14 @@ namespace Chimeric
             Plugin.tenticleStuff.TryGetValue(self, out var something);
             if (self.slugcatStats.name.value == ROT_NAME) {
                 something.isRot = true;
-            }
-            else if (self.slugcatStats.name.ToString() == DYNAMO_NAME) {
-                something.isDynamo = true;
-            }
-            else if (self.slugcatStats.name.ToString() == "nine") {
-                something.isNine = true;
-            }
-            if (something.isRot) {
                 SlugRot.RotCtor(self, something);
             }
-            else if (something.isDynamo) {
+            else if (self.slugcatStats.name.value == DYNAMO_NAME) {
+                something.isDynamo = true;
                 Dynamo.DynoCtor(self, something);
             }
-            else if (something.isNine) {
-
+            else if (self.slugcatStats.name.value == "nine") {
+                something.isNine = true;
             }
         }
         public void OpenSaysMe()
@@ -389,7 +313,7 @@ namespace Chimeric
         public int timeInWaterUpTo80;
         [AllowNull] public AbstractOnTentacleStick stuckCreature;
         public bool crawlToRoll;
-        public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation
+        public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation. Should also probably be merged into the Line class instead of shoved here
             public Vector2 targetPosition = new Vector2(0,0);
             public bool hasConnectionSpot = false;
             public bool foundSurface = false;
@@ -555,13 +479,14 @@ namespace Chimeric
         public static void TentaclesFindPositionToGoTo(PlayerEx something, Player self, float startPos) {
             int numerations = (self.room != null && self.room.game.IsStorySession && (self.room.world.region.name=="RM" || self.room.world.region.name=="SS" || self.room.world.region.name=="DM"))? 100 : 200;
             float multiple = numerations==100? 2f : 1f;
-            for (int i = 0; i < something.targetPos.Length; i++) {
+            for (int i = 0; i < something.tentacles.Length; i++) {
                 if (something.targetPos[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250)) {
                     something.targetPos[i].foundSurface = false;
                     something.targetPos[i].hasConnectionSpot = false;
                 }
+                // These two for loops make a part of a circle, where k is the radius and j is the relative angle
                 for (float k = 0; k < numerations; k++) {
-                    for (float j = startPos + (float)Math.PI/8*(i); j < startPos + (float)Math.PI/8*(i+1); j+=(((float)Math.PI)/256f)*multiple) {
+                    for (float j = startPos + (float)Math.PI/8*(i); j < startPos + (float)Math.PI/8*(i+1); j+=((float)Math.PI/256f)*multiple) {
                         Vector2 position = new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y);
                         var tile = self.room?.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y));
                         if (!something.targetPos[i].foundSurface && self.room != null && tile != null && (tile.Solid || tile.AnyBeam)) {
@@ -574,7 +499,7 @@ namespace Chimeric
                             //something.targetPos[i].isPole = (self.room.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y)).AnyBeam);
                             something.targetPos[i].targetPosition = position + (something.targetPos[i].isPole? (position-self.mainBodyChunk.pos).normalized * 5 : new Vector2(0,0));
                             something.targetPos[i].foundSurface = true;
-                            goto End;
+                            goto End;   // If this tentacle found a valid position, skip doing the rest of the math and go to the next one
                         }
                         /*else if (!something.targetPos[i].foundSurface && self.room != null && (tile == null || (!tile.Solid && !tile.AnyBeam))) {
                             something.targetPos[i].foundSurface = false;
@@ -775,7 +700,6 @@ namespace Chimeric
         public int fearTime = -1;
         public List<EatingRot> yummersRotting = new List<EatingRot>();
     }
-    
     ///<summary>The pivot points for the tentacles, where they can bend. To be replaced with tailSegments</summary>
     public class Point
     {

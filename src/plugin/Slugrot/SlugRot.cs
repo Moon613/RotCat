@@ -7,6 +7,9 @@ namespace Chimeric
 {
     public class SlugRot
     {
+        public static void Apply() {
+            On.Player.Update += SlugRot.PlayerUpdate;
+        }
         public static void PlayerUpdate(On.Player.orig_Update orig, Player self, bool eu)
         {
             orig(self, eu);
@@ -116,7 +119,6 @@ namespace Chimeric
                 }
             }
         }
-
         public static void RotCtor(Player self, PlayerEx something) {
             //self.abstractCreature.tentacleImmune = true;
             something.totalCircleSprites = something.circleAmmount * 4;
@@ -184,7 +186,7 @@ namespace Chimeric
                 tentacle.decoPushDirection = Vector2.right * Random.Range(-0.7f,0.7f) * 0;  //Curently unused because it doesn't look the best. To enable change the 0 to something.decorativeTentacles[i].decoPushDirection *I think
             }
             self.slugcatStats.runspeedFac = 0.65f;
-            self.slugcatStats.corridorClimbSpeedFac = 1.1f;
+            self.slugcatStats.corridorClimbSpeedFac = 1.2f;
         }
     }
 }

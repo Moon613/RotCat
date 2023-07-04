@@ -5,6 +5,10 @@ namespace Chimeric
 {
     public class CalmTentacles
     {
+        public static void Apply() {
+            On.Player.NewRoom += CalmNewRoom;
+            On.Player.SpitOutOfShortCut += CalmSpitOutOfShortCut;
+        }
         public static void CalmNewRoom(On.Player.orig_NewRoom orig, Player self, Room newRoom) {
             orig(self, newRoom);
             Plugin.tenticleStuff.TryGetValue(self, out var something);
