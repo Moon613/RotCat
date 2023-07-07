@@ -57,6 +57,9 @@
     <Reference Include="SlugBase">
       <HintPath>D:\SteamLibrary\steamapps\workshop\content\312520\2933196558\plugins\SlugBase.dll</HintPath>
     </Reference>
+    <Reference Include="POM">
+      <HintPath>D:\SteamLibrary\steamapps\workshop\content\312520\2920439169\plugins\Pom.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine.UnityWebRequestWWWModule">
       <HintPath>..\..\..\MoreDLLs\game\RainWorld_Data\Managed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
     </Reference>

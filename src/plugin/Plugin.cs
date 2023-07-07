@@ -15,8 +15,6 @@ using System.IO;
 using MonoMod.RuntimeDetour;
 using static System.Reflection.BindingFlags;
 using System.Diagnostics.CodeAnalysis;
-using Menu;
-using SlugBase;
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -57,7 +55,7 @@ namespace Chimeric
             DynamoWhiskers.Hooks();
             On.Player.ctor += PlayerCtor;
 
-            
+
 
             // Can be used to change sleep screen stuff, may end up using this later
             /*On.Menu.MenuScene.BuildScene += (orig, self) => {
@@ -316,7 +314,7 @@ namespace Chimeric
         public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation. Should also probably be merged into the Line class instead of shoved here
             public Vector2 targetPosition = new Vector2(0,0);
             public bool hasConnectionSpot = false;
-            public bool foundSurface = false;
+            public bool foundSurface = true;
             public bool isPole = false;
         }
         public bool isRot = false;  //Is set to true if the Slugrot character is selected, so it doesn't apply anything to non-rot characters
@@ -402,6 +400,8 @@ namespace Chimeric
             }
             if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).AnyBeam) && !something.automateMovement) {
                 
+                something.targetPos[0].foundSurface = true;
+                
                 int upDown = (Input.GetKey(ChimericOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementDown.Value)? -1:0);
                 int rightLeft = (Input.GetKey(ChimericOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementLeft.Value)? -1:0);
                 
@@ -480,7 +480,7 @@ namespace Chimeric
             int numerations = (self.room != null && self.room.game.IsStorySession && (self.room.world.region.name=="RM" || self.room.world.region.name=="SS" || self.room.world.region.name=="DM"))? 100 : 200;
             float multiple = numerations==100? 2f : 1f;
             for (int i = 0; i < something.tentacles.Length; i++) {
-                if (something.targetPos[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250)) {
+                if (something.targetPos[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250) && something.targetPos[i].hasConnectionSpot) {
                     something.targetPos[i].foundSurface = false;
                     something.targetPos[i].hasConnectionSpot = false;
                 }
@@ -711,7 +711,10 @@ namespace Chimeric
             this.locked = locked;
         }
         public void Update(PlayerEx something, Player self, Line tentacle) {
-            if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && ((Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
+            if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && (
+                    (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && 
+                    something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && 
+                    ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
                 this.locked = true;
             }
             else {
