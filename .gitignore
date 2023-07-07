@@ -4,5 +4,6 @@ game/
 lib/
 .vs/
 build/
+mod/
 
 .fake
