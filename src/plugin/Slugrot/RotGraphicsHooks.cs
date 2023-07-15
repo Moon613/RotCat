@@ -160,15 +160,16 @@ namespace Chimeric
                 int nextTentacleSprite = 0;
                 foreach(var tentacle in something.tentacles)
                 {
-                    Vector2 vector = Vector2.Lerp(tentacle.pList[0].prevPosition, tentacle.pList[0].position, timeStacker);
-                    vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].prevPosition, tentacle.pList[1].position, timeStacker), vector);
+                    Vector2 vector = Vector2.Lerp(tentacle.pList[0].lastPos, tentacle.pList[0].pos, timeStacker);
+                    vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].lastPos, tentacle.pList[1].pos, timeStacker), vector);
                     float width = 2.35f;//width
                     for (int i = 0; i < tentacle.pList.Length; i++)
                     {
-                        Vector2 vector2 = tentacle.pList[i].position;
+                        Vector2 vector2 = tentacle.pList[i].pos;
                         Vector2 perpendicularVector = Custom.PerpendicularVector((vector - vector2).normalized);
                         //base.Logger.LogDebug(vector + " " + vector2);
-                        if (i == 0)
+                        // idk what good values are here, these seem to work for i tho
+                        if (i == 0 || i == 1 || i == 2)
                         {
                             (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4, self.player.mainBodyChunk.pos - perpendicularVector * width - camPos);
                             (sLeaser.sprites[something.initialLegSprite + nextTentacleSprite] as TriangleMesh)?.MoveVertice(i * 4 + 1, self.player.mainBodyChunk.pos + perpendicularVector * width - camPos);
@@ -186,12 +187,12 @@ namespace Chimeric
                 nextTentacleSprite = 0;
                 foreach(var tentacle in something.decorativeTentacles)
                 {
-                    Vector2 vector = Vector2.Lerp(tentacle.pList[0].prevPosition, tentacle.pList[0].position, timeStacker);
-                    vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].prevPosition, tentacle.pList[1].position, timeStacker), vector);
+                    Vector2 vector = Vector2.Lerp(tentacle.pList[0].lastPos, tentacle.pList[0].pos, timeStacker);
+                    vector += Custom.DirVec(Vector2.Lerp(tentacle.pList[1].lastPos, tentacle.pList[1].pos, timeStacker), vector);
                     const float thickness = 2f;
                     for (int i = 0; i < tentacle.pList.Length; i++)
                     {
-                        Vector2 vector2 = tentacle.pList[i].position;
+                        Vector2 vector2 = tentacle.pList[i].pos;
                         Vector2 a = Custom.PerpendicularVector((vector - vector2).normalized);
                         //base.Logger.LogDebug(vector + " " + vector2);
                         if (i == 0) {

@@ -38,6 +38,7 @@ namespace Chimeric
         public static bool loaded = false;
         public const string ROT_NAME = "slugrot";
         public const string DYNAMO_NAME = "dynamo";
+        public const string DRACO_NAME = "draco";
         public void OnEnable()
         {
             ConversationOverrides.Hooks();  // Won't do anything until the bool in the slugbase json is changed to true
@@ -187,34 +188,6 @@ namespace Chimeric
                     Debug.Log("Reset timer");
                 }
             };*/
-            /*private static void AddIntroRollImage(ILContext il)
-            {
-                var cursor = new ILCursor(il);
-                if (!cursor.TryGotoNext(MoveType.Before, i => i.MatchLdloc(3)))
-                {
-                    return;
-                }
-                cursor.RemoveRange(8);
-                if (!cursor.TryGotoPrev(MoveType.After, i => i.MatchLdstr("Intro_Roll_C_")))
-                {
-                    return;
-                }
-                cursor.EmitDelegate((string str) =>
-                {
-                    Debug.Log("Removed instructions and made it to destination, please remain seated with your seatbelts on.");
-                    List<string> strArr = new List<string> {
-                        "gourmand",
-                        "rivulet",
-                        "spear",
-                        "artificer",
-                        "saint"
-                    };
-                    int prevLength = strArr.Count;
-                    strArr.Add("abc123");
-                    int randNum = Random.Range(0, strArr.Count);
-                    return (randNum > prevLength)? strArr[randNum] : $"Intro_Roll_C_{strArr[randNum]}";
-                });
-            }*/
             #endregion
         }
         public static void PlayerCtor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world) {
@@ -229,8 +202,8 @@ namespace Chimeric
                 something.isDynamo = true;
                 Dynamo.DynoCtor(self, something);
             }
-            else if (self.slugcatStats.name.value == "nine") {
-                something.isNine = true;
+            else if (self.slugcatStats.name.value == DRACO_NAME) {
+                something.isDragon = true;
             }
         }
         public void OpenSaysMe()
@@ -319,7 +292,7 @@ namespace Chimeric
         }
         public bool isRot = false;  //Is set to true if the Slugrot character is selected, so it doesn't apply anything to non-rot characters
         public bool isDynamo = false;
-        public bool isNine = false;
+        public bool isDragon = false;
     }
     public class Functions {
         ///<summary> Find the position for tentacles to start finding connection points at </summary>
@@ -358,11 +331,11 @@ namespace Chimeric
             }
             return 0;
         }
-        public static void StickCalculations(Line[][] totalTentacles) {
+        public static void StickCalculations(Line[][] totalTentacles, Player self) {
             foreach (Line[] tentacleList in totalTentacles) {
                 foreach (Line tentacle in tentacleList) {
                     foreach (Stick stick in tentacle.sList) {
-                        stick.Update();
+                        stick.Update(self);
                     }
                 }
             }
@@ -382,9 +355,10 @@ namespace Chimeric
             }
             if (something.retractionTimer <= 40 && something.retractionTimer > 0) {
                 foreach (var tentacle in something.tentacles) {
-                    foreach (var stick in tentacle.sList)
-                    {
-                        stick.length = Mathf.Lerp(0.15f, 10, something.retractionTimer/40);
+                    foreach (var stick in tentacle.sList) {
+                        if (!stick.taught) {
+                            stick.length = Mathf.Lerp(0.15f, 10, something.retractionTimer/40);
+                        }
                     }
                 }
             }
@@ -398,19 +372,19 @@ namespace Chimeric
                 Debug.Log($"Caught Creature is {something.stuckCreature.PhysObject}");
                 something.stuckCreature.Update();
             }
-            if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position).AnyBeam) && !something.automateMovement) {
+            if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).AnyBeam) && !something.automateMovement) {
                 
                 something.targetPos[0].foundSurface = true;
                 
                 int upDown = (Input.GetKey(ChimericOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementDown.Value)? -1:0);
                 int rightLeft = (Input.GetKey(ChimericOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementLeft.Value)? -1:0);
                 
-                float dist = Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos);
+                float dist = Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos);
                 if (dist < 300f) {
-                    something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position += new Vector2(3f*(something.overrideControls? rightLeft:self.input[0].x), 6f*(something.overrideControls? upDown:self.input[0].y));
+                    something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos += new Vector2(3f*(something.overrideControls? rightLeft:self.input[0].x), 6f*(something.overrideControls? upDown:self.input[0].y));
                 }
                 for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
-                    if (something.stuckCreature == null && Custom.DistLess(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position, self.room.abstractRoom.creatures[i].realizedCreature.mainBodyChunk.pos, 15f) && self.room.abstractRoom.creatures[i].realizedCreature != self) {
+                    if (something.stuckCreature == null && Custom.DistLess(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos, self.room.abstractRoom.creatures[i].realizedCreature.mainBodyChunk.pos, 15f) && self.room.abstractRoom.creatures[i].realizedCreature != self) {
                         something.stuckCreature = new AbstractOnTentacleStick(self.abstractCreature, self.room.abstractRoom.creatures[i]);
                         something.stuckCreature.ChangeOverlap(false);
                     }
@@ -427,7 +401,7 @@ namespace Chimeric
                 if (self.feetStuckPos != null && !Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))  //Stop feet from magnetising to the ground
                     self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
                 if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
-                    something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
+                    something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos;
                     something.targetPos[0].foundSurface = true;
                     something.targetPos[0].hasConnectionSpot = true;
                 }
@@ -516,23 +490,23 @@ namespace Chimeric
                 //base.Logger.LogDebug(Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere));
                 if (!something.targetPos[i].hasConnectionSpot && something.automateMovement) {
                     something.targetPos[i].hasConnectionSpot = true;
-                    Debug.Log($"Please god help me here: {something.tentacles[i].iWantToGoThere} and {something.targetPos[i].targetPosition}");
+                    //Debug.Log($"Please god help me here: {something.tentacles[i].iWantToGoThere} and {something.targetPos[i].targetPosition}");
                     something.tentacles[i].iWantToGoThere = something.targetPos[i].targetPosition;
                     //self.room.AddObject(new Spark(something.tentacles[i].iWantToGoThere, new Vector2(5,5), Color.blue, null, 10, 20));  //Testing
                 }
-                if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 5f:5f/*Can be adjusted maybe, rn it plays multiple times for poles*/) && something.automateMovement) {
+                if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 5f:5f/*Can be adjusted maybe, rn it plays multiple times for poles*/) && something.automateMovement) {
                     something.tentacles[i].isAttatchedToSurface = 0;
-                    Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position);
+                    Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos);
                     
-                    something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tentacle Tip, controls speed tentacles move to their target pos
+                    something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tentacle Tip, controls speed tentacles move to their target pos
                     
                     something.tentacles[i].canPlaySound = true;
                     //base.Logger.LogDebug(direction);
                 }
-                if (self.room != null && Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere) < 15f) {    //Casually giving the player some lenience
+                if (self.room != null && Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) < 15f) {    //Casually giving the player some lenience
                     something.tentacles[i].isAttatchedToSurface = 1;
                     if (something.tentacles[i].canPlaySound) {
-                        self.room.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Grab_Terrain, something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, 1f, 1f);
+                        self.room.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Grab_Terrain, something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, 1f, 1f);
                         something.tentacles[i].canPlaySound = false;
                     }
                 }
@@ -572,7 +546,7 @@ namespace Chimeric
                     //base.Logger.LogDebug("Drawsprites");
                     //base.Logger.LogDebug(something.tentacles[i].cList[j].position);
                     if (i == 0) {
-                        Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                        Vector2 vector = (something.tentacles[i].cList[j].pointA.pos-something.tentacles[i].cList[j].pointB.pos).normalized;
                         bool rotationSide = vector.x < 0;
                         tentacle1Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         tentacle1Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
@@ -582,7 +556,7 @@ namespace Chimeric
                         }
                     }
                     if (i == 1) {
-                        Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                        Vector2 vector = (something.tentacles[i].cList[j].pointA.pos-something.tentacles[i].cList[j].pointB.pos).normalized;
                         bool rotationSide = vector.x < 0;
                         tentacle2Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle2Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
@@ -593,7 +567,7 @@ namespace Chimeric
                         }
                     }
                     if (i == 2) {
-                        Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                        Vector2 vector = (something.tentacles[i].cList[j].pointA.pos-something.tentacles[i].cList[j].pointB.pos).normalized;
                         bool rotationSide = vector.x < 0;
                         tentacle3Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle3Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
@@ -604,7 +578,7 @@ namespace Chimeric
                         }
                     }
                     if (i == 3) {
-                        Vector2 vector = (something.tentacles[i].cList[j].pointA.position-something.tentacles[i].cList[j].pointB.position).normalized;
+                        Vector2 vector = (something.tentacles[i].cList[j].pointA.pos-something.tentacles[i].cList[j].pointB.pos).normalized;
                         bool rotationSide = vector.x < 0;
                         tentacle4Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle4Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
@@ -701,16 +675,19 @@ namespace Chimeric
         public List<EatingRot> yummersRotting = new List<EatingRot>();
     }
     ///<summary>The pivot points for the tentacles, where they can bend. To be replaced with tailSegments</summary>
-    public class Point
+    public class Point : BodyPart
     {
-        public Vector2 position = new Vector2(700,200);
-        public Vector2 prevPosition = new Vector2(701,200);
         public bool locked = false;
-        public Point(Vector2 position, bool locked) {
-            this.position = position;
+        public Point(GraphicsModule ow, Vector2 position, bool locked) : base (ow) {
+            this.pos = position;
+            this.vel = Vector2.zero;
             this.locked = locked;
+            this.rad = 2f;
+            this.surfaceFric = 0.5f;
+            this.airFriction = 0.5f;
         }
         public void Update(PlayerEx something, Player self, Line tentacle) {
+            base.Update();
             if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && (
                     (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && 
                     something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && 
@@ -721,13 +698,15 @@ namespace Chimeric
                 this.locked = false;
             }
             if (!this.locked && self.room != null) {
-                Vector2 positionBeforeUpdate = this.position;
-                this.position += (this.position - this.prevPosition) * Random.Range(0.9f,1.1f);
-                this.position += Vector2.down * self.room.gravity * Random.Range(0.15f,0.3f);
-                this.prevPosition = positionBeforeUpdate;
+                Vector2 positionBeforeUpdate = this.pos;
+                this.pos += (this.pos - this.lastPos) * Random.Range(0.9f,1.1f);
+                float distToWaterSurface = this.pos.y - self.room.FloatWaterLevel(this.pos.x) - 2f;  // Adjust positions, maybe subtract a bit extra
+                this.pos += Vector2.down * self.room.gravity * Random.Range(0.15f,0.3f) * (distToWaterSurface < 0? Mathf.Clamp(distToWaterSurface/1.5f, -0.6f, -0.1f) : 1f);
+                this.PushOutOfTerrain(self.room, this.pos);
+                this.lastPos = positionBeforeUpdate;
             }
             if (Array.IndexOf(tentacle.pList, this) == 0) {
-                this.position = self.mainBodyChunk.pos;
+                this.pos = self.mainBodyChunk.pos;
             }
         }
     }
@@ -735,18 +714,22 @@ namespace Chimeric
     public class Stick {
         public Point pointA, pointB;
         public float length;
+        public bool taught;
         public Stick(Point pointA, Point pointB, float length) {
             this.pointA = pointA;
             this.pointB = pointB;
             this.length = length;
+            this.taught = false;
         }
-        public void Update() {
-            Vector2 stickCenter = (this.pointA.position + this.pointB.position)/2;
-            Vector2 stickDir = (this.pointA.position - this.pointB.position).normalized;
+        public void Update(Player self) {
+            Vector2 stickCenter = (this.pointA.pos + this.pointB.pos)/2;
+            Vector2 stickDir = (this.pointA.pos - this.pointB.pos).normalized;
             if (!this.pointA.locked)
-                this.pointA.position = stickCenter + stickDir * this.length / 2;
+                this.pointA.pos = stickCenter + stickDir * this.length / 2;
+                //this.pointA.PushOutOfTerrain(self.room, this.pointA.pos);
             if (!this.pointB.locked)
-                this.pointB.position = stickCenter - stickDir * this.length / 2;
+                this.pointB.pos = stickCenter - stickDir * this.length / 2;
+                //this.pointB.PushOutOfTerrain(self.room, this.pointB.pos);
             }
     }
     public class Line {
@@ -796,10 +779,10 @@ namespace Chimeric
             }
         }
         public void Update() {
-            Vector2 direction = this.pointB.position - this.pointA.position;
+            Vector2 direction = this.pointB.pos - this.pointA.pos;
             Vector2 dirNormalized = direction.normalized;
             Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
-            this.position = this.pointA.position + (dirNormalized * this.offset.y) + (perpendicularVector * this.offset.x);
+            this.position = this.pointA.pos + (dirNormalized * this.offset.y) + (perpendicularVector * this.offset.x);
         }
         public Point pointA;
         public Point pointB;
@@ -910,7 +893,7 @@ namespace Chimeric
             Player? player = (this.Player.realizedObject as Player);
             if (crit != null && player != null) {
                 if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
-                    crit.mainBodyChunk.pos = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position;
+                    crit.mainBodyChunk.pos = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos;
                 }
                 foreach (var chunk in crit.bodyChunks) {
                     chunk.vel = Vector2.zero;

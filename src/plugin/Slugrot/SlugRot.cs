@@ -2,6 +2,7 @@ using UnityEngine;
 using RWCustom;
 using System;
 using Random = UnityEngine.Random;
+using SlugBase.Assets;
 
 namespace Chimeric
 {
@@ -13,8 +14,8 @@ namespace Chimeric
         public static void PlayerUpdate(On.Player.orig_Update orig, Player self, bool eu)
         {
             orig(self, eu);
-            Plugin.tenticleStuff.TryGetValue(self, out var something);
-            if (something.isRot && self != null) {
+            // This is all my code
+            if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
                 //Debug.Log(self.mainBodyChunk.pos);
                 self.scavengerImmunity = 9999;  //Might want to add a system that calculates this based on rep, since you should be able to become friends if you want
                 something.overrideControls = Input.GetKey(ChimericOptions.tentMovementLeft.Value) || Input.GetKey(ChimericOptions.tentMovementRight.Value) || Input.GetKey(ChimericOptions.tentMovementDown.Value) || Input.GetKey(ChimericOptions.tentMovementUp.Value);
@@ -39,18 +40,18 @@ namespace Chimeric
                     foreach (Point p in tentacle.pList)
                     {
                         if (!p.locked && self.room != null) {
-                            Vector2 positionBeforeUpdate = p.position;
-                            p.position += (p.position - p.prevPosition) * Random.Range(0.9f,1.1f);
-                            p.position += (Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f));
-                            p.prevPosition = positionBeforeUpdate;
+                            Vector2 positionBeforeUpdate = p.pos;
+                            p.pos += (p.pos - p.lastPos) * Random.Range(0.9f,1.1f);
+                            p.pos += (Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f));
+                            p.lastPos = positionBeforeUpdate;
                         }
                         if (Array.IndexOf(tentacle.pList, p) == 0) {
                             p.locked = true;
-                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
+                            p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
                         }
                         if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1) {
                             p.locked = true;
-                            p.position = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
+                            p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
                         }
                     }
                 }
@@ -93,14 +94,13 @@ namespace Chimeric
                                 yPos = -4;
                                 break;
                         }
-                        something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position = Vector2.Lerp(
+                        something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos = Vector2.Lerp(
                         Functions.RotateAroundPoint(self.mainBodyChunk.pos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 
                         Functions.RotateAroundPoint(self.mainBodyChunk.lastPos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 0.5f);
                     }
                 }
 
                 //Physics for the individual points and Rot Bulbs
-                int numIterations = 10;
                 foreach (var tentacle in something.tentacles) {
                     foreach (Point p in tentacle.pList)
                     {
@@ -113,9 +113,11 @@ namespace Chimeric
                     }
                 }
                 //Physics for the sticks of all tentacles, which affects the points
+                int numIterations = 10;
+                if (self.room?.abstractRoom.name == "SB_L01") {numIterations=1;}
                 for (int i = 0; i < numIterations; i++) {
                     Line[][] totalTentacles = {something.tentacles, something.decorativeTentacles};
-                    Functions.StickCalculations(totalTentacles);
+                    Functions.StickCalculations(totalTentacles, self);
                 }
             }
         }
@@ -143,8 +145,8 @@ namespace Chimeric
             foreach (var tentacle in something.tentacles) {
                 tentacle.pList = new Point[something.segments];
                 for (int i = 0; i < something.segments; i++) {
-                    tentacle.pList[i] = new Point(new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0);
-                    tentacle.pList[i].prevPosition = new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-i);
+                    tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0);
+                    tentacle.pList[i].lastPos = new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-i);
                 }
                 tentacle.sList = new Stick[something.segments-1];
                 for (int i = 0; i < tentacle.pList.Length-1; i++) {
@@ -177,7 +179,7 @@ namespace Chimeric
             foreach (var tentacle in something.decorativeTentacles) {
                 tentacle.pList = new Point[something.decorationSegments];
                 for (int i = 0; i < tentacle.pList.Length; i++) {
-                    tentacle.pList[i] = new Point(new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0||i==(tentacle.pList.Length-1)?true:false);
+                    tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0||i==(tentacle.pList.Length-1)?true:false);
                 }
                 tentacle.sList = new Stick[tentacle.pList.Length-1];
                 for (int i = 0; i < tentacle.pList.Length-1; i++) {
