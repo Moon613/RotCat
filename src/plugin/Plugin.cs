@@ -257,7 +257,6 @@ namespace Chimeric
         public int decorationSegments = 10; //The amount of points in the decorative tentacles. Might be aassumed as 10 in some places, can't remember, so changing this might break something
         public Vector2 potentialGrapSpot;   //IT'S NOT USED LMAOOOOOO
         public int totalCircleSprites;  //Assigned later, keeps track of the total amount of circle sprites on all the tentacles (Is used solely for resizing the sLeaser array)
-        public TargetPos[] targetPos = new TargetPos[4] {new TargetPos(), new TargetPos(), new TargetPos(), new TargetPos()};
         public bool automateMovement = false;   //Determines whether the tentacles will guide themselves toward a wall/pole
         public float grabWallCooldown = 0;  //Currently unused, honestly can't remember what I wanted to do with it
         [AllowNull] public Vector2[] randomPosOffest;   //Currently not used, applies a force the the 2 decorative tentacles behind the scug
@@ -284,12 +283,6 @@ namespace Chimeric
         public int timeInWaterUpTo80;
         [AllowNull] public AbstractOnTentacleStick stuckCreature;
         public bool crawlToRoll;
-        public class TargetPos {    //Movement tentacle targeting logic, probably very messing in implementation. Should also probably be merged into the Line class instead of shoved here
-            public Vector2 targetPosition = new Vector2(0,0);
-            public bool hasConnectionSpot = false;
-            public bool foundSurface = true;
-            public bool isPole = false;
-        }
         public bool isRot = false;  //Is set to true if the Slugrot character is selected, so it doesn't apply anything to non-rot characters
         public bool isDynamo = false;
         public bool isDragon = false;
@@ -353,12 +346,15 @@ namespace Chimeric
             else if (something.retractionTimer > 7/*-20*/ && !Input.GetKey(ChimericOptions.tentMovementEnable.Value) && !self.dead) {
                 something.retractionTimer -= 0.5f;
             }
-            if (something.retractionTimer <= 40 && something.retractionTimer > 0) {
-                foreach (var tentacle in something.tentacles) {
-                    foreach (var stick in tentacle.sList) {
-                        if (!stick.taught) {
-                            stick.length = Mathf.Lerp(0.15f, 10, something.retractionTimer/40);
-                        }
+            foreach (var tentacle in something.tentacles) {
+                foreach (var stick in tentacle.sList) {
+                    if (something.automateMovement) {
+                        stick.length = Vector2.Distance(tentacle.pList[tentacle.pList.Length-1].pos, tentacle.pList[0].pos)/36f;
+                        //Debug.Log("Using distance");
+                    }
+                    else if (something.retractionTimer > 0 && something.retractionTimer <= 40 ) {
+                        stick.length = Mathf.Lerp(0.15f, 10, something.retractionTimer/40);
+                        //Debug.Log("Using retraction");
                     }
                 }
             }
@@ -374,7 +370,7 @@ namespace Chimeric
             }
             if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).AnyBeam) && !something.automateMovement) {
                 
-                something.targetPos[0].foundSurface = true;
+                something.tentacles[0].foundSurface = true;
                 
                 int upDown = (Input.GetKey(ChimericOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementDown.Value)? -1:0);
                 int rightLeft = (Input.GetKey(ChimericOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementLeft.Value)? -1:0);
@@ -402,8 +398,8 @@ namespace Chimeric
                     self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
                 if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
                     something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos;
-                    something.targetPos[0].foundSurface = true;
-                    something.targetPos[0].hasConnectionSpot = true;
+                    something.tentacles[0].foundSurface = true;
+                    something.tentacles[0].hasConnectionSpot = true;
                 }
                 something.automateMovement = true;
                 int connectionsToSurface = 0;   //Get how many tentacles are attached to the terrain/poles
@@ -454,25 +450,25 @@ namespace Chimeric
             int numerations = (self.room != null && self.room.game.IsStorySession && (self.room.world.region.name=="RM" || self.room.world.region.name=="SS" || self.room.world.region.name=="DM"))? 100 : 200;
             float multiple = numerations==100? 2f : 1f;
             for (int i = 0; i < something.tentacles.Length; i++) {
-                if (something.targetPos[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.targetPos[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250) && something.targetPos[i].hasConnectionSpot) {
-                    something.targetPos[i].foundSurface = false;
-                    something.targetPos[i].hasConnectionSpot = false;
+                if (something.tentacles[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250) && something.tentacles[i].hasConnectionSpot) {
+                    something.tentacles[i].foundSurface = false;
+                    something.tentacles[i].hasConnectionSpot = false;
                 }
                 // These two for loops make a part of a circle, where k is the radius and j is the relative angle
                 for (float k = 0; k < numerations; k++) {
                     for (float j = startPos + (float)Math.PI/8*(i); j < startPos + (float)Math.PI/8*(i+1); j+=((float)Math.PI/256f)*multiple) {
                         Vector2 position = new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y);
                         var tile = self.room?.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y));
-                        if (!something.targetPos[i].foundSurface && self.room != null && tile != null && (tile.Solid || tile.AnyBeam)) {
+                        if (!something.tentacles[i].foundSurface && self.room != null && tile != null && (tile.Solid || tile.AnyBeam)) {
                             if (tile.AnyBeam) {
-                                something.targetPos[i].isPole = true;
+                                something.tentacles[i].isPole = true;
                             }
                             else {
-                                something.targetPos[i].isPole = false;
+                                something.tentacles[i].isPole = false;
                             }   //These two are technically the same I think
                             //something.targetPos[i].isPole = (self.room.GetTile(new Vector2((Mathf.Cos(j)*(k * 2))+self.mainBodyChunk.pos.x,(Mathf.Sin(j)*(k * 2))+self.mainBodyChunk.pos.y)).AnyBeam);
-                            something.targetPos[i].targetPosition = position + (something.targetPos[i].isPole? (position-self.mainBodyChunk.pos).normalized * 5 : new Vector2(0,0));
-                            something.targetPos[i].foundSurface = true;
+                            something.tentacles[i].targetPosition = position + (something.tentacles[i].isPole? (position-self.mainBodyChunk.pos).normalized * 5 : new Vector2(0,0));
+                            something.tentacles[i].foundSurface = true;
                             goto End;   // If this tentacle found a valid position, skip doing the rest of the math and go to the next one
                         }
                         /*else if (!something.targetPos[i].foundSurface && self.room != null && (tile == null || (!tile.Solid && !tile.AnyBeam))) {
@@ -488,13 +484,13 @@ namespace Chimeric
             for (int i = 0; i < something.tentacles.Length; i++) {
                 //base.Logger.LogDebug(something.targetPos[i].isPipe);
                 //base.Logger.LogDebug(Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].position, something.tentacles[i].iWantToGoThere));
-                if (!something.targetPos[i].hasConnectionSpot && something.automateMovement) {
-                    something.targetPos[i].hasConnectionSpot = true;
+                if (!something.tentacles[i].hasConnectionSpot && something.automateMovement) {
+                    something.tentacles[i].hasConnectionSpot = true;
                     //Debug.Log($"Please god help me here: {something.tentacles[i].iWantToGoThere} and {something.targetPos[i].targetPosition}");
-                    something.tentacles[i].iWantToGoThere = something.targetPos[i].targetPosition;
+                    something.tentacles[i].iWantToGoThere = something.tentacles[i].targetPosition;
                     //self.room.AddObject(new Spark(something.tentacles[i].iWantToGoThere, new Vector2(5,5), Color.blue, null, 10, 20));  //Testing
                 }
-                if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > (something.targetPos[i].isPole? 5f:5f/*Can be adjusted maybe, rn it plays multiple times for poles*/) && something.automateMovement) {
+                if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > (something.tentacles[i].isPole? 5f:5f/*Can be adjusted maybe, rn it plays multiple times for poles*/) && something.automateMovement) {
                     something.tentacles[i].isAttatchedToSurface = 0;
                     Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos);
                     
@@ -690,7 +686,7 @@ namespace Chimeric
             base.Update();
             if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && (
                     (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && 
-                    something.targetPos[Array.IndexOf(something.tentacles, tentacle)].foundSurface && 
+                    something.tentacles[Array.IndexOf(something.tentacles, tentacle)].foundSurface && 
                     ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
                 this.locked = true;
             }
@@ -740,6 +736,10 @@ namespace Chimeric
         public int isAttatchedToSurface = 0;
         public Vector2 decoPushDirection = new Vector2(0,0);
         public bool canPlaySound = true;
+        public Vector2 targetPosition = new Vector2(0,0);
+        public bool hasConnectionSpot = false;
+        public bool foundSurface = true;
+        public bool isPole = false;
     }
     public class BodyRot {
         public BodyRot (FSprite chunk1, FSprite chunk2, Vector2 offset, float scale/*, int bodyRotEyePosInSpriteList = null*/) {
