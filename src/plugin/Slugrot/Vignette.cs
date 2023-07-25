@@ -11,12 +11,11 @@ namespace Chimeric
     {
         public static void Apply() {
             On.GameSession.ctor += GameSessionStartup;
-            On.RainWorldGame.ExitToMenu += QuitModeBackToMenu;
+            On.ProcessManager.RequestMainProcessSwitch_ProcessID += SwitchGameProcess;
             On.Room.InGameNoise += CystsReacts;
             On.VirtualMicrophone.PlaySound_SoundID_PositionedSoundEmitter_bool_float_float_bool += CystsReacts2;
             On.Creature.SuckedIntoShortCut += RotCatSuckIntoShortcut;
             On.Creature.SpitOutOfShortCut += RotCatSpitOutOfShortcut;
-            On.Menu.SleepAndDeathScreen.ctor += CleanDarkContainerOnSleepAndDeathScreen;
         }
         public static float defaultVignetteSize = 0.7f;
         public static void GameSessionStartup(On.GameSession.orig_ctor orig, GameSession self, RainWorldGame game) {
@@ -34,10 +33,11 @@ namespace Chimeric
                         ChimericOptions.enableVignette = new Configurable<bool>(false);
                     } catch (Exception err) {
                         Debug.LogError($"Vignette did not like the band-aid:\n{err}");
+                        Debug.LogException(err);
                     }
                 }
             }
-            if (!Plugin.appliedVignette && ChimericOptions.enableVignette?.Value == true) {
+            if (!Plugin.appliedVignette && ChimericOptions.enableVignette?.Value == true && self is StoryGameSession && !self.game.rainWorld.safariMode) {
                 Plugin.vignetteEffect = new FSprite("Futile_White", true);
                 Functions.UpdateVignette(new Color(0.5f, 0.5f, 0.55f, defaultVignetteSize), false);  //r & g are the position of the vignette inside the square. b is the intensity/radius and a is the alpha/fade radius
                 Plugin.vignetteEffect.SetPosition(new Vector2(game.rainWorld.screenSize.x/2f, game.rainWorld.screenSize.y/2f));
@@ -50,11 +50,12 @@ namespace Chimeric
                 Debug.Log("Set Sprite of darkness");
             }
         }
-        public static void QuitModeBackToMenu(On.RainWorldGame.orig_ExitToMenu orig, RainWorldGame self) {
-            orig(self);
+        public static void SwitchGameProcess(On.ProcessManager.orig_RequestMainProcessSwitch_ProcessID orig, ProcessManager self, ProcessManager.ProcessID nextProcessID)
+        {
             Plugin.darkContainer.RemoveAllChildren();
             Plugin.vignetteEffect = null;
             Plugin.appliedVignette = false;
+            orig(self, nextProcessID);
         }
         public static void CystsReacts(On.Room.orig_InGameNoise orig, Room self, InGameNoise noise) {
             orig(self, noise);
@@ -106,12 +107,6 @@ namespace Chimeric
             if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.enableVignette.Value) {
                 Functions.UpdateVignette(new Color(Plugin.vignetteEffect.color.r, Plugin.vignetteEffect.color.g, Plugin.vignetteEffect.color.b, defaultVignetteSize));
             }
-        }
-        public static void CleanDarkContainerOnSleepAndDeathScreen(On.Menu.SleepAndDeathScreen.orig_ctor orig, SleepAndDeathScreen self, ProcessManager manager, ProcessManager.ProcessID ID) {
-            orig(self, manager, ID);
-            Plugin.darkContainer.RemoveAllChildren();
-            Futile.stage.RemoveChild(Plugin.darkContainer);
-            Plugin.appliedVignette = false;
         }
         public static bool CalculateMod5PlusMinus1(int num) {
             if (num%5==0 || (num-1)%5==0 || (num+1)%5==0) {
