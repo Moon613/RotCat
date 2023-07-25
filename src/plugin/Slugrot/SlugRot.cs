@@ -14,9 +14,9 @@ namespace Chimeric
         public static void PlayerUpdate(On.Player.orig_Update orig, Player self, bool eu)
         {
             orig(self, eu);
-            // This is all my code
             if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
                 //Debug.Log(self.mainBodyChunk.pos);
+                if (Input.GetKey(KeyCode.Y)) SlugBase.Assets.CustomSlideshow.NewOutro(self.room.game.manager, "slugrot_outro", "slugrot_sleep");
                 self.scavengerImmunity = 9999;  //Might want to add a system that calculates this based on rep, since you should be able to become friends if you want
                 something.overrideControls = Input.GetKey(ChimericOptions.tentMovementLeft.Value) || Input.GetKey(ChimericOptions.tentMovementRight.Value) || Input.GetKey(ChimericOptions.tentMovementDown.Value) || Input.GetKey(ChimericOptions.tentMovementUp.Value);
                 if (something.grabWallCooldown > 0) { //Doesn't do anything right now, need to get it to play nice with the logic first     //New note, this will probably go unused.
@@ -32,7 +32,7 @@ namespace Chimeric
                 Functions.TentacleRetraction(self, something);
 
                 //The same, but for the decorative tentacles which have slightly different parameters to follow.
-                foreach (Line tentacle in something.decorativeTentacles) {
+                foreach (Tentacle tentacle in something.decorativeTentacles) {
                     int pointer = Array.IndexOf(something.decorativeTentacles, tentacle);
                     Vector2 direction = self.mainBodyChunk.pos - self.bodyChunks[1].pos;
                     Vector2 dirNormalized = direction.normalized;
@@ -72,6 +72,7 @@ namespace Chimeric
                         something.stuckCreature = null;
                     }
                 }
+                #region What to do if the player is not dead but also not using tentacles for movement
                 if (!something.automateMovement && !self.dead) {
                     for (int i = (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))?1:0; i < something.tentacles.Length; i++) {
                         float xPos=0, yPos=20;
@@ -94,11 +95,13 @@ namespace Chimeric
                                 yPos = -4;
                                 break;
                         }
+                        if (self.bodyMode == Player.BodyModeIndex.CorridorClimb) { xPos *= 0.15f; }
                         something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos = Vector2.Lerp(
                         Functions.RotateAroundPoint(self.mainBodyChunk.pos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 
                         Functions.RotateAroundPoint(self.mainBodyChunk.lastPos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 0.5f);
                     }
                 }
+                #endregion
 
                 //Physics for the individual points and Rot Bulbs
                 foreach (var tentacle in something.tentacles) {
@@ -116,7 +119,7 @@ namespace Chimeric
                 int numIterations = 10;
                 if (self.room?.abstractRoom.name == "SB_L01") {numIterations=1;}
                 for (int i = 0; i < numIterations; i++) {
-                    Line[][] totalTentacles = {something.tentacles, something.decorativeTentacles};
+                    Tentacle[][] totalTentacles = {something.tentacles, something.decorativeTentacles};
                     Functions.StickCalculations(totalTentacles, self);
                 }
             }
@@ -124,12 +127,12 @@ namespace Chimeric
         public static void RotCtor(Player self, PlayerEx something) {
             //self.abstractCreature.tentacleImmune = true;
             something.totalCircleSprites = something.circleAmmount * 4;
-            something.tentacles[0] = new Line();
-            something.tentacles[1] = new Line();
-            something.tentacles[2] = new Line();
-            something.tentacles[3] = new Line();
-            something.decorativeTentacles[0] = new Line();
-            something.decorativeTentacles[1] = new Line();
+            something.tentacles[0] = new Tentacle();
+            something.tentacles[1] = new Tentacle();
+            something.tentacles[2] = new Tentacle();
+            something.tentacles[3] = new Tentacle();
+            something.decorativeTentacles[0] = new Tentacle();
+            something.decorativeTentacles[1] = new Tentacle();
             something.randomPosOffest = new Vector2[something.decorativeTentacles.Length*2];
             for (int i = 0; i < something.randomPosOffest.Length; i++) {    //Decides where to place the ends of the decorative tentacles
                 if (i%2==0) {
@@ -148,9 +151,9 @@ namespace Chimeric
                     tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0);
                     tentacle.pList[i].lastPos = new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-i);
                 }
-                tentacle.sList = new Stick[something.segments-1];
+                tentacle.sList = new PointConnection[something.segments-1];
                 for (int i = 0; i < tentacle.pList.Length-1; i++) {
-                    tentacle.sList[i] = new Stick(tentacle.pList[i], tentacle.pList[i+1], 9.25f);
+                    tentacle.sList[i] = new PointConnection(tentacle.pList[i], tentacle.pList[i+1], 9.25f);
                 }
                 tentacle.cList = new Circle[something.circleAmmount];//Hard-coded bumps here      Make sure to actually change the index they're being put in if copying
                 //base.Logger.LogDebug(tentacle.pList.Length);
@@ -181,9 +184,9 @@ namespace Chimeric
                 for (int i = 0; i < tentacle.pList.Length; i++) {
                     tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0||i==(tentacle.pList.Length-1)?true:false);
                 }
-                tentacle.sList = new Stick[tentacle.pList.Length-1];
+                tentacle.sList = new PointConnection[tentacle.pList.Length-1];
                 for (int i = 0; i < tentacle.pList.Length-1; i++) {
-                    tentacle.sList[i] = new Stick(tentacle.pList[i], tentacle.pList[i+1], 5f);
+                    tentacle.sList[i] = new PointConnection(tentacle.pList[i], tentacle.pList[i+1], 5f);
                 }
                 tentacle.decoPushDirection = Vector2.right * Random.Range(-0.7f,0.7f) * 0;  //Curently unused because it doesn't look the best. To enable change the 0 to something.decorativeTentacles[i].decoPushDirection *I think
             }
