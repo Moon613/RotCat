@@ -8,11 +8,11 @@ namespace Chimeric
         public Color bodyColor;
         public Color xColor;
         public FSprite sprite;
-        public Creature crit;
+        public AbstractCreature crit;
         public bool hideSpritesInPipe = false;
         public int indexInArray;
 
-        public EatingRot(float maxRad, Color bodyColor, Color xColor, Vector2 pos, FSprite sprite, Creature crit, int indexInArray) {
+        public EatingRot(float maxRad, Color bodyColor, Color xColor, Vector2 pos, FSprite sprite, AbstractCreature crit, int indexInArray) {
             this.maxRad = maxRad;
             this.bodyColor = bodyColor;
             this.xColor = xColor;
@@ -60,7 +60,7 @@ namespace Chimeric
         }
         public override void Update(bool eu)
         {
-            if (crit.slatedForDeletetion) {
+            if (crit.realizedCreature.slatedForDeletetion) {
                 Destroy();
             }
             base.Update(eu);

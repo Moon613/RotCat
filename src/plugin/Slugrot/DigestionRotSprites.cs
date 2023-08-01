@@ -8,7 +8,7 @@ namespace Chimeric
     public class DigestionRotSprites
     {
         public static void Apply() {
-            On.Creature.ctor += AddCWTToCreature;
+            On.AbstractCreature.ctor += AddCWTToCreature;
             On.Player.EatMeatUpdate += PlayerEatsCreature;
             On.Player.TossObject += TossAndRemoveCreature;
             On.GraphicsModule.DrawSprites += DrawRotYumSprites;
@@ -17,9 +17,9 @@ namespace Chimeric
             IL.Player.EatMeatUpdate += ReplaceEatingSound;
         }
         ///<summary>Gives each creature a CWT to hold info on the rot sprites upon creation</summary>
-        public static void AddCWTToCreature(On.Creature.orig_ctor orig, Creature self, AbstractCreature abstractCreature, World world)
+        public static void AddCWTToCreature(On.AbstractCreature.orig_ctor orig, AbstractCreature self, World world, CreatureTemplate creatureTemplate, Creature realizedCreature, WorldCoordinate pos, EntityID ID)
         {
-            orig(self, abstractCreature, world);
+            orig(self, world, creatureTemplate, realizedCreature, pos, ID);
             Plugin.creatureYummersSprites.Add(self, new CreatureEx());
             Plugin.creatureYummersSprites.TryGetValue(self, out var extraSprites);
             extraSprites.maxNumOfSprites = Random.Range(5, 16);
@@ -30,10 +30,8 @@ namespace Chimeric
             if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
                 Creature creature;
                 if (self.grasps[graspIndex].grabbedChunk.owner is not Creature crit) {return;} 
-                else {
-                    creature = crit;
-                }
-                if (Plugin.creatureYummersSprites.TryGetValue(creature, out CreatureEx thing)) {
+                else { creature = crit; }
+                if (Plugin.creatureYummersSprites.TryGetValue(creature.abstractCreature, out CreatureEx thing)) {
                     if (creature.State.meatLeft != creature.Template.meatPoints /*&& creature.Template.meatPoints > 0*/ && !thing.isBeingEaten) {
                         thing.isBeingEaten = true;
                         something.eating = true;
@@ -61,7 +59,7 @@ namespace Chimeric
         public static void DrawRotYumSprites(On.GraphicsModule.orig_DrawSprites orig, GraphicsModule self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            if (self.owner is Creature creature && Plugin.creatureYummersSprites.TryGetValue(creature, out CreatureEx thing)) {
+            if (self.owner is Creature creature && Plugin.creatureYummersSprites.TryGetValue(creature.abstractCreature, out CreatureEx thing)) {
                 if (thing.addNewSprite) {
                     while (Random.Range(0,2) <= 0) {
                         thing.maxNumOfSprites++;
@@ -75,7 +73,7 @@ namespace Chimeric
                     while (randSprite == null || randSprite.GetPosition() == Vector2.zero || !randSprite.isVisible || randSprite.color.maxColorComponent < 0.08f) {
                         randSprite = sLeaser.sprites[Random.Range(0, sLeaser.sprites.Length)];
                     }
-                    EatingRot newRotYum = new EatingRot(Random.Range(0.125f, 0.22f), randSprite.color, Color.blue, randSprite.GetPosition(), randSprite, creature, sLeaser.sprites.IndexOf(randSprite));
+                    EatingRot newRotYum = new EatingRot(Random.Range(0.125f, 0.22f), randSprite.color, Color.blue, randSprite.GetPosition(), randSprite, creature.abstractCreature, sLeaser.sprites.IndexOf(randSprite));
                     self.owner.room.AddObject(newRotYum);
                     thing.yummersRotting.Add(newRotYum);
                 }
@@ -93,7 +91,7 @@ namespace Chimeric
         public static void CompressCreature(On.Creature.orig_Update orig, Creature self, bool eu)
         {
             orig(self, eu);
-            if (Plugin.creatureYummersSprites.TryGetValue(self, out var thing)) {
+            if (Plugin.creatureYummersSprites.TryGetValue(self.abstractCreature, out var thing)) {
                 
             }
         }
@@ -101,7 +99,7 @@ namespace Chimeric
         public static void ReassignRotSprites(On.Creature.orig_SpitOutOfShortCut orig, Creature self, IntVector2 pos, Room newRoom, bool spitOutAllSticks)
         {
             orig(self, pos, newRoom, spitOutAllSticks);
-            if (Plugin.creatureYummersSprites.TryGetValue(self, out var thing))
+            if (Plugin.creatureYummersSprites.TryGetValue(self.abstractCreature, out var thing))
             {
                 thing.redrawRotSprites = true;
             }
@@ -111,7 +109,7 @@ namespace Chimeric
         {
             if (self is Player player) {
                 for (int i = 0; i < player.grasps.Length; i++) {
-                    if (player.grasps[i] != null && player.grasps[i].grabbedChunk != null && player.grasps[i].grabbedChunk.owner is Creature crit && Plugin.creatureYummersSprites.TryGetValue(crit, out var thing))
+                    if (player.grasps[i] != null && player.grasps[i].grabbedChunk != null && player.grasps[i].grabbedChunk.owner is Creature crit && Plugin.creatureYummersSprites.TryGetValue(crit.abstractCreature, out var thing))
                     {
                         foreach (EatingRot rotBulb in thing.yummersRotting)
                         {
