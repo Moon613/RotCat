@@ -115,13 +115,15 @@ public class PointConnection {
     public void Update(Player self) {
         Vector2 stickCenter = (this.pointA.pos + this.pointB.pos)/2;
         Vector2 stickDir = (this.pointA.pos - this.pointB.pos).normalized;
-        if (!this.pointA.locked)
+        if (!this.pointA.locked) {
             this.pointA.pos = stickCenter + stickDir * this.length / 2;
             //this.pointA.PushOutOfTerrain(self.room, this.pointA.pos);
-        if (!this.pointB.locked)
+        }
+        if (!this.pointB.locked) {
             this.pointB.pos = stickCenter - stickDir * this.length / 2;
             //this.pointB.PushOutOfTerrain(self.room, this.pointB.pos);
         }
+    }
 }
 public class Tentacle {
     [AllowNull] public Point[] pList;
@@ -293,7 +295,7 @@ public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStic
                 crit.bodyChunks[this.ConnectedChunk].MoveFromOutsideMyUpdate(eu, something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos);
             }
             foreach (var chunk in crit.bodyChunks) {
-                chunk.vel = Vector2.down;
+                chunk.vel = Vector2.down * (crit.room == null? 0 : crit.room.gravity);
             }
         }
     }

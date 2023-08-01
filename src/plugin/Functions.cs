@@ -92,15 +92,15 @@ namespace Chimeric {
                 float dist = Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos);
                 if (dist < 300f) {
                     float weight = 0f;
-                    if (something.stuckCreature != null && something.stuckCreature.PhysObject.realizedObject is Creature crit) { weight = crit.TotalMass/5f; Debug.Log(crit.TotalMass); }
+                    if (something.stuckCreature != null && something.stuckCreature.PhysObject.realizedObject is Creature crit) { weight = crit.TotalMass/5f*self.room.gravity; Debug.Log(crit.TotalMass); }
                     something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos += new Vector2(3f*(something.overrideControls? rightLeft:self.input[0].x), 6f*(something.overrideControls? upDown:self.input[0].y) - Mathf.Min(weight, 5f));
                 }
-                if (Input.GetKey(KeyCode.G) && something.stuckCreature == null) {
+                if (Input.GetKey(ChimericOptions.grabButton.Value) && something.stuckCreature == null && self.Consious) {
                     for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
                         for (int j = 0; j < self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks.Length; j++) {
                             if (Custom.DistLess(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos, self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks[j].pos, 15f) && self.room.abstractRoom.creatures[i].realizedCreature != self) {
                                 something.stuckCreature = new AbstractOnTentacleStick(self.abstractCreature, self.room.abstractRoom.creatures[i], j);
-                                self.room.PlayCustomChunkSound("Daddy_And_Bro_Tentacle_Grab_Creature", self.room.abstractRoom.creatures[i].realizedCreature.mainBodyChunk, 1f, 1f);
+                                self.room.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Grab_Creature, self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks[j].pos, 1f, 1f);
                                 something.stuckCreature.ChangeOverlap(false);
                                 goto Escape;
                             }
