@@ -29,7 +29,7 @@ namespace Chimeric
         bool init = false;
         public static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new ConditionalWeakTable<Player, PlayerEx>();
         public static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new ConditionalWeakTable<Spark, SparkEx>();
-        public static ConditionalWeakTable<Creature, CreatureEx> creatureYummersSprites = new ConditionalWeakTable<Creature, CreatureEx>();
+        public static ConditionalWeakTable<AbstractCreature, CreatureEx> creatureYummersSprites = new ConditionalWeakTable<AbstractCreature, CreatureEx>();
         public static FContainer darkContainer = new FContainer();
         public static FSprite? vignetteEffect;
         public static bool appliedVignette = false;
@@ -83,7 +83,7 @@ namespace Chimeric
                 orig(self, owner, name);
                 if (name == "Slugrot") {
                     FSprite sprite = new FSprite("remixmenubreakline", false);
-                    sprite.SetPosition(new Vector2(300-(1366-Futile.screen.pixelWidth)/2f, 275));
+                    sprite.SetPosition(new Vector2(300-(1366-Futile.screen.pixelWidth)/2f, 240));
                     self._container.AddChild(sprite);
                 }
             };
