@@ -19,7 +19,7 @@ namespace Chimeric
             On.PlayerGraphics.Update += PlayerGraphics_Update;
         }
 
-        public static ConditionalWeakTable<Player, Whiskerdata> tailwhiskerstorage = new ConditionalWeakTable<Player, Whiskerdata>();
+        public static ConditionalWeakTable<Player, Whiskerdata> whiskerStorage = new ConditionalWeakTable<Player, Whiskerdata>();
         public class Whiskerdata
         {
             public bool ready = false;
@@ -40,7 +40,6 @@ namespace Chimeric
             {
                 public Scale(GraphicsModule cosmetics) : base(cosmetics)
                 {
-
                 }
                 public override void Update()
                 {
@@ -58,7 +57,7 @@ namespace Chimeric
                 }
                 public float length = 10f;
             }
-            public int facewhiskersprite(int side, int pair)
+            public int FaceWhiskerSprite(int side, int pair)
             {
                 return initialfacewhiskerloc + side + pair + pair;
             }
@@ -70,8 +69,8 @@ namespace Chimeric
 
             if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo)
             {
-                tailwhiskerstorage.Add(self.player, new Whiskerdata(self.player)); //setup the CWT
-                tailwhiskerstorage.TryGetValue(self.player, out Whiskerdata data); // really im stupid this could just have been setup before adding it to the cwt!
+                whiskerStorage.Add(self.player, new Whiskerdata(self.player)); //setup the CWT
+                whiskerStorage.TryGetValue(self.player, out Whiskerdata data); // really im stupid this could just have been setup before adding it to the cwt!
                 for (int i = 0; i < data.tailScales.Length; i++) //some loops for setting up the arrays
                 {
 
@@ -89,30 +88,31 @@ namespace Chimeric
             if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo)
             {
 
-                tailwhiskerstorage.TryGetValue(self.player, out var thedata); //get out the data from thw CWT
+                if (whiskerStorage.TryGetValue(self.player, out var thedata)) { //get out the data from thw CWT
 
-                thedata.initialfacewhiskerloc = sLeaser.sprites.Length; //add on 6 more bc theres 6 tail sprites
-                Array.Resize(ref sLeaser.sprites, sLeaser.sprites.Length + 4); //add on more space for our sprites
-                // 6 for tail sprites, 4 for face sprites.
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
+                    thedata.initialfacewhiskerloc = sLeaser.sprites.Length; //add on 6 more bc theres 6 tail sprites
+                    Array.Resize(ref sLeaser.sprites, sLeaser.sprites.Length + 4); //add on more space for our sprites
+                    // 6 for tail sprites, 4 for face sprites.
+                    for (int i = 0; i < 2; i++)
                     {
-                        sLeaser.sprites[thedata.facewhiskersprite(i, j)] = new FSprite(thedata.facesprite);
+                        for (int j = 0; j < 2; j++)
+                        {
+                            sLeaser.sprites[thedata.FaceWhiskerSprite(i, j)] = new FSprite(thedata.facesprite);
 
-                        sLeaser.sprites[thedata.facewhiskersprite(i, j)].scaleY = 10f / Futile.atlasManager.GetElementWithName(thedata.sprite).sourcePixelSize.y;
-                        sLeaser.sprites[thedata.facewhiskersprite(i, j)].anchorY = 0.1f;
+                            sLeaser.sprites[thedata.FaceWhiskerSprite(i, j)].scaleY = 10f / Futile.atlasManager.GetElementWithName(thedata.sprite).sourcePixelSize.y;
+                            sLeaser.sprites[thedata.FaceWhiskerSprite(i, j)].anchorY = 0.1f;
+                        }
                     }
+                    thedata.ready = true; //say that we're ready to add these to the container!
+                    self.AddToContainer(sLeaser, rCam, null); //then add em!
                 }
-                thedata.ready = true; //say that we're ready to add these to the container!
-                self.AddToContainer(sLeaser, rCam, null); //then add em!
             }
         }
         private static void PlayerGraphics_AddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContatiner)
         {
             orig(self, sLeaser, rCam, newContatiner);
 
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && tailwhiskerstorage.TryGetValue(self.player, out Whiskerdata data) && data.ready) //make sure to check that we're ready
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && whiskerStorage.TryGetValue(self.player, out Whiskerdata data) && data.ready) //make sure to check that we're ready
             {
                 FContainer container = rCam.ReturnFContainer("Midground"); //get the midground container
                 
@@ -120,7 +120,7 @@ namespace Chimeric
                 {
                     for (int j = 0; j < 2; j++)
                     {
-                        FSprite whisker = sLeaser.sprites[data.facewhiskersprite(i, j)];
+                        FSprite whisker = sLeaser.sprites[data.FaceWhiskerSprite(i, j)];
                         container.AddChild(whisker);
                     }
                 }
@@ -130,7 +130,7 @@ namespace Chimeric
         private static void PlayerGraphics_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && tailwhiskerstorage.TryGetValue(self.player, out Whiskerdata data))
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && whiskerStorage.TryGetValue(self.player, out Whiskerdata data))
             {
                 //oh god i need to rewrite all of this into one for loop. <-- past me is right, you probably want to do this better. its a mess
                 int index = 0;
@@ -154,30 +154,18 @@ namespace Chimeric
                             num = 180f;
                             vector.x += 5f;
                         }
-                        sLeaser.sprites[data.facewhiskersprite(i, j)].x = vector.x - camPos.x;
-                        sLeaser.sprites[data.facewhiskersprite(i, j)].y = vector.y - camPos.y;
-                        sLeaser.sprites[data.facewhiskersprite(i, j)].rotation = Custom.AimFromOneVectorToAnother(vector, Vector2.Lerp(data.headScales[index].lastPos, data.headScales[index].pos, timeStacker)) + num;
+                        sLeaser.sprites[data.FaceWhiskerSprite(i, j)].x = vector.x - camPos.x;
+                        sLeaser.sprites[data.FaceWhiskerSprite(i, j)].y = vector.y - camPos.y;
+                        sLeaser.sprites[data.FaceWhiskerSprite(i, j)].rotation = Custom.AimFromOneVectorToAnother(vector, Vector2.Lerp(data.headScales[index].lastPos, data.headScales[index].pos, timeStacker)) + num;
                         if (i == 1)
                         {
-                            sLeaser.sprites[data.facewhiskersprite(i, j)].scaleX = 0.4f;
+                            sLeaser.sprites[data.FaceWhiskerSprite(i, j)].scaleX = 0.4f;
                         }
                         else
                         {
-                            sLeaser.sprites[data.facewhiskersprite(i, j)].scaleX = -0.4f * Mathf.Sign(f);
+                            sLeaser.sprites[data.FaceWhiskerSprite(i, j)].scaleX = -0.4f * Mathf.Sign(f);
                         }
-                        Color col = Color.blue;
-                        if (self.useJollyColor) {
-                            sLeaser.sprites[something.initialFinSprite + i + j].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
-                        }
-                        else if (!PlayerGraphics.CustomColorsEnabled()) {
-                            SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.DYNAMO_NAME).ToList()[0], out SlugBaseCharacter chara);
-                            SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
-                            col = colors[2].GetColor(self.player.playerState.playerNumber);
-                        }
-                        else if (PlayerGraphics.CustomColorsEnabled()) {
-                            col = PlayerGraphics.CustomColorSafety(2);
-                        }
-                        sLeaser.sprites[data.facewhiskersprite(i, j)].color = col;
+                        sLeaser.sprites[data.FaceWhiskerSprite(i, j)].color = SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 2);
                         index++;
                     }
                 }
@@ -186,7 +174,7 @@ namespace Chimeric
         private static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
         {
             orig(self);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && tailwhiskerstorage.TryGetValue(self.player, out Whiskerdata data))
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && whiskerStorage.TryGetValue(self.player, out Whiskerdata data))
             {
                 int index = 0; // once again we are in horrid loop hell. ew.
                 index = 0;
