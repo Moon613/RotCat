@@ -30,23 +30,24 @@ public class PlayerEx
     public int initialBodyRotSprite;    //Stores the position of the initial bodyRot sprite in the sprite list
     public int bodyRotSpriteAmount = 8;     //Change this whenever I change the amount of Rot sprites on the body
     [AllowNull] public BodyRot[] rList;     //An array that stores the logic for the body rot sprites
-    public Color rotEyeColor;   //Should store and control the color of the X sprites from the slugbase custom color
-    [AllowNull] public FAtlas faceAtlas;
-    public bool eating = false;
-    public float timer = 0f;
+    [AllowNull] public FAtlas faceAtlas;    //An atlas that contains all of rotcat's alternate face sprites
+    public bool eating = false; //If rotcat is already eating something, so that it only plays the daddy eating sound once
+    public float timer = 0f;    //General timer
     public int hearingCooldown = 0;
     public int smolHearingCooldown = 0;
-    public bool canPlayShockSound = true;
-    public int swimTimer = 0;
+    public int canPlayShockSound = 0;   //Can Dynamo play the centipede sound?
+    public int swimTimer = 0;   //General timer 2, mainly used for dynamo's fin animation when entering or exiting the water. For slugrot, it is used as a grab cooldown.
     public float slowX = 0;
     public float slowY = 0;
-    public Vector2 prevInput = Vector2.zero;
-    public int initialFinSprite;
-    public List<Fin> fList = new List<Fin>();
-    public int timeInWater;
-    public int timeInWaterUpTo80;
-    [AllowNull] public AbstractOnTentacleStick stuckCreature;
-    public bool crawlToRoll;
+    public Vector2 prevInput = Vector2.zero;    //Dynamo previous input
+    public int initialFinSprite;    //Initial position in sprite array of Dyamo's first fin sprite
+    public List<Fin> fList = new(); //Data for how the fin sprites should be moving
+    public int timeInWater; //How long has Dynamo has been in the water, up to 40 ticks
+    public int timeInWaterUpTo80;   //Similar to the previous timer, but goes up to 80 ticks
+    [AllowNull] public AbstractOnTentacleStick stuckCreature;   //Stuck creature, grabbed by rotcat's tentacles.
+    public bool crawlToRoll;    //Should Dynamo go directly to a roll animation instead of a crawl one?
+    public int initialGillSprite;
+    public int initialFlipDirection;
     public bool isRot = false;  //Is set to true if the Slugrot character is selected, so it doesn't apply anything to non-rot characters
     public bool isDynamo = false;
     public bool isDragon = false;
@@ -54,7 +55,7 @@ public class PlayerEx
 public class SparkEx {
     public bool isHearingSpark;
     public SparkEx(bool flag) {
-        this.isHearingSpark = flag;
+        isHearingSpark = flag;
     }
 }
 public class CreatureEx {
@@ -65,9 +66,10 @@ public class CreatureEx {
     public int maxNumOfSprites;
     public bool shouldFearDynamo = false;
     public int fearTime = -1;
-    public List<EatingRot> yummersRotting = new List<EatingRot>();
+    public List<CreatureCorruptionBulb> yummersRotting = new List<CreatureCorruptionBulb>();
+    public int meat = 0;
 }
-///<summary>The pivot points for the tentacles, where they can bend. To be replaced with tailSegments</summary>
+///<summary>The pivot points for the tentacles, where they can bend.</summary>
 public class Point : BodyPart
 {
     public bool locked = false;
@@ -79,27 +81,28 @@ public class Point : BodyPart
         this.surfaceFric = 0.5f;
         this.airFriction = 0.5f;
     }
-    public void Update(PlayerEx something, Player self, Tentacle tentacle) {
+    public void Update(PlayerEx something, Player player, Tentacle tentacle) {
         base.Update();
-        if (Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && (
-                (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) && 
-                something.tentacles[Array.IndexOf(something.tentacles, tentacle)].foundSurface && 
-                ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement))) {  //If it is the very last point in the list, the tentacle tip
+        if (!player.dead &&
+                tentacle.foundSurface && 
+                Array.IndexOf(tentacle.pList, this) == tentacle.pList.Length-1 && 
+                (Input.GetKey(ChimericOptions.TentMovementEnable.Value) || Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value)) && 
+                ((Array.IndexOf(something.tentacles, tentacle) == 0) || something.automateMovement)) {  //If it is the very last point in the list, the tentacle tip
             this.locked = true;
         }
         else {
             this.locked = false;
         }
-        if (!this.locked && self.room != null) {
+        if (!this.locked && player.room != null) {
             Vector2 positionBeforeUpdate = this.pos;
             this.pos += (this.pos - this.lastPos) * Random.Range(0.9f,1.1f);
-            float distToWaterSurface = this.pos.y - self.room.FloatWaterLevel(this.pos.x) - 2f;  // Adjust positions, maybe subtract a bit extra
-            this.pos += Vector2.down * self.room.gravity * Random.Range(0.15f,0.3f) * (distToWaterSurface < 0? Mathf.Clamp(distToWaterSurface/1.5f, -0.6f, -0.1f) : 1f);
-            this.PushOutOfTerrain(self.room, this.pos);
+            float distToWaterSurface = this.pos.y - player.room.FloatWaterLevel(this.pos.x) - 2f;  // Adjust positions, maybe subtract a bit extra
+            this.pos += Vector2.down * player.room.gravity * Random.Range(0.15f,0.3f) * (distToWaterSurface < 0? Mathf.Clamp(distToWaterSurface/1.5f, -0.6f, -0.1f) : 1f);
+            PushOutOfTerrain(player.room, this.pos);
             this.lastPos = positionBeforeUpdate;
         }
         if (Array.IndexOf(tentacle.pList, this) == 0) {
-            this.pos = self.mainBodyChunk.pos;
+            this.pos = player.mainBodyChunk.pos;
         }
     }
 }
@@ -137,6 +140,24 @@ public class Tentacle {
     public bool hasConnectionSpot = false;
     public bool foundSurface = true;
     public bool isPole = false;
+    public void Reset(Vector2 resetPoint) {
+        foreach (Point point in pList) {
+            point.Reset(resetPoint);
+            foundSurface = false;    //Could put a check that determines the position of player and sets startPos behind them
+            iWantToGoThere = resetPoint;
+            //Functions.TentaclesFindPositionToGoTo(something, self, Functions.FindPos(something.overrideControls, self, RotCat.staticOptions));
+            targetPosition = resetPoint;
+        }
+    }
+    public Vector2 EndOfTentaclePos {
+        get { return pList[pList.Length-1].pos; }
+    }
+    public Point EndOfTentaclePoint {
+        get { return pList[pList.Length-1]; }
+    }
+    public int TipIndex {
+        get { return pList.Length; }
+    }
 }
 public class BodyRot {
     public BodyRot (FSprite chunk1, FSprite chunk2, Vector2 offset, float scale/*, int bodyRotEyePosInSpriteList = null*/) {
@@ -176,10 +197,10 @@ public class Circle {
         }
     }
     public void Update() {
-        Vector2 direction = this.pointB.pos - this.pointA.pos;
+        Vector2 direction = pointB.pos - pointA.pos;
         Vector2 dirNormalized = direction.normalized;
         Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
-        this.position = this.pointA.pos + (dirNormalized * this.offset.y) + (perpendicularVector * this.offset.x);
+        position = pointA.pos + (dirNormalized * offset.y) + (perpendicularVector * offset.x);
     }
     public Point pointA;
     public Point pointB;
@@ -242,39 +263,41 @@ public class Fin {
     public float scaleY;
     public float startAdditionalRotation;
     public float foldRotation;
-    public List<float> swimRange = new List<float>{};
+    public List<float> swimRange = new ();
     public float swimCycle;
     public float startSwimCycle;
     public float corriderTimer;
 }
 public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStick
 {
-    [AllowNull] public AbstractPhysicalObject Player
+    public AbstractPhysicalObject Player
     {
         get
         {
-            return this.A;
+            return A;
         }
         set
         {
-            this.A = value;
+            A = value;
         }
     }
-    [AllowNull] public AbstractPhysicalObject PhysObject
+    public AbstractPhysicalObject PhysObject
     {
         get
         {
-            return this.B;
+            return B;
         }
         set
         {
-            this.B = value;
+            B = value;
         }
     }
     public int ConnectedChunk;
-    public AbstractOnTentacleStick(AbstractPhysicalObject player, AbstractPhysicalObject creature, int connectedChunk) : base(player, creature)
+    public AbstractOnTentacleStick(AbstractPhysicalObject player, AbstractPhysicalObject creature, int? connectedChunk) : base(player, creature)
     {
-        this.ConnectedChunk = connectedChunk;
+        if (connectedChunk != null) {
+            ConnectedChunk = (int)connectedChunk;
+        }
     }
     public override string SaveToString(int roomIndex)
     {
@@ -282,31 +305,32 @@ public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStic
         {
             roomIndex.ToString(),
             "<stkA>sprOnBackStick<stkA>",
-            this.A.ID.ToString(),
+            A.ID.ToString(),
             "<stkA>",
-            this.B.ID.ToString()
+            B.ID.ToString()
         });
     }
     public void Update(bool eu) {
-        Creature? crit = (this.PhysObject.realizedObject as Creature);
-        Player? player = (this.Player.realizedObject as Player);
-        if (crit != null && player != null) {
-            if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isRot) {
-                crit.bodyChunks[this.ConnectedChunk].MoveFromOutsideMyUpdate(eu, something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos);
-            }
-            foreach (var chunk in crit.bodyChunks) {
-                chunk.vel = Vector2.down * (crit.room == null? 0 : crit.room.gravity);
+        PhysicalObject? physObj = PhysObject.realizedObject;
+        if (physObj != null && Player.realizedObject is Player player)
+        {
+            if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isRot)
+            {
+                physObj.bodyChunks[ConnectedChunk].MoveFromOutsideMyUpdate(eu, something.tentacles[0].pList[something.tentacles[0].pList.Length - 1].pos);
+                foreach (var chunk in physObj.bodyChunks)
+                {
+                    chunk.vel = Vector2.down * (physObj.room == null ? 0 : physObj.room.gravity);
+                }
             }
         }
     }
     public void ChangeOverlap(bool newOverlap)
     {
-        Creature? crit = (this.PhysObject.realizedObject as Creature);
-        Player? player = (this.Player.realizedObject as Player);
-        //crit.CollideWithObjects = newOverlap;
+        PhysicalObject physObj = PhysObject.realizedObject;
         //crit.canBeHitByWeapons = newOverlap;
-        if (crit != null) {
-            crit.GoThroughFloors = newOverlap;
+        if (physObj != null) {
+            physObj.GoThroughFloors = newOverlap;
+            physObj.CollideWithObjects = newOverlap;
         }
         /*if (crit.graphicsModule == null || player.room == null)
         {
