@@ -5,13 +5,11 @@ using Random = UnityEngine.Random;
 using static TriangleMesh;
 using MonoMod.Cil;
 using Mono.Cecil.Cil;
-using System.Linq;
-using SlugBase;
 using System.Collections.Generic;
 
 namespace Chimeric
 {
-    public partial class Dynamo
+    public class DynamoGraphics
     {
         public static void Apply() {
             On.PlayerGraphics.ctor += DynoGrafCtor;
@@ -62,6 +60,16 @@ namespace Chimeric
                         something.fList[i].additionalRotation = Mathf.Lerp(something.fList[i].foldRotation, -89.5f, something.fList[i].corriderTimer/20f);
                     }
                     //Debug.Log($"startAdditionalRotation: {something.fList[i].startAdditionalRotation} additionalRotation: {something.fList[i].additionalRotation} timeInWater: {something.timeInWater} normal rotation: {sLeaser.sprites[something.initialFinSprite+i].rotation}");
+                }
+                self.gills.DrawSprites(sLeaser, rCam, timeStacker, camPos);
+                Color effectedColor = SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 2);
+                for (int i = self.gills.startSprite + self.gills.scalesPositions.Length - 1; i >= self.gills.startSprite; i--)
+                {
+                    sLeaser.sprites[i].color = self.gills.baseColor;
+                    if (self.gills.colored)
+                    {
+                        sLeaser.sprites[i + self.gills.scalesPositions.Length].color = Color.Lerp(effectedColor, self.gills.baseColor, self.malnourished / 1.75f);
+                    }
                 }
             }
         }
@@ -129,17 +137,19 @@ namespace Chimeric
                 if (self.player.animation == Player.AnimationIndex.Roll) {
                     for (int i = 0; i < self.tail.Length; i++)
                     {
-                        if (i != 0) {
-                            var startVel = Custom.VecToDeg(Custom.DirVec(self.tail[i].pos, self.tail[i-1].pos));
-                            startVel += 45f * -self.player.flipDirection;
-                            self.tail[i].vel = Custom.DegToVec(startVel) * 15f;
+                        float startVel = Custom.VecToDeg(Custom.DirVec(self.tail[i].pos, self.tail[i-1].pos));
+                        startVel += 45 * -something.initialFlipDirection;
+                        self.tail[i].vel = Custom.DegToVec(startVel) * 15;
+                        if (self.player.bodyChunks[0].pos.y >= self.player.bodyChunks[1].pos.y && self.player.animation == Player.AnimationIndex.Roll) {
+                            self.tail[i].vel.x *= 2.2f;
+                            self.tail[i].vel.y -= 0.25f;
                         }
                     }
+                    // Absolutely KILLING THINGS bit
                     for (int i = 0; i < self.player.room.abstractRoom.creatures.Count; i++) {
-                        var crit = self.player.room.abstractRoom.creatures[i].realizedCreature;
-                        foreach (var chunk in crit.bodyChunks) {
-                            if (Custom.DistLess(chunk.pos, self.tail[self.tail.Length - 2].pos, 55f) && crit != self.player) {
-                                var prevState = crit.State;
+                        Creature? crit = self.player.room.abstractRoom.creatures[i].realizedCreature;
+                        foreach (BodyChunk chunk in crit.bodyChunks) {
+                            if (Custom.DistLess(chunk.pos, self.tail[self.tail.Length - 2].pos, 55f) && crit != self.player && (crit is not Player || ChimericOptions.FriendlyFire.Value)) {
                                 crit.Violence(self.player.mainBodyChunk, null, chunk, null, Creature.DamageType.Blunt, 0.4f, 100f);
                                 crit.SetKillTag(self.player.abstractCreature);
                                 chunk.vel += new Vector2(ChimericOptions.yeetusMagnitude.Value * self.player.flipDirection, 19f) / (chunk.mass * 3f);
@@ -149,7 +159,9 @@ namespace Chimeric
                         }
                     }
                 }
+                something.initialFlipDirection = self.player.flipDirection;
                 #endregion
+                self.gills.Update();
             }
         }
         public static void DynoInitSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
@@ -197,14 +209,18 @@ namespace Chimeric
                 something.fList.Add(new Fin(self.tail[self.tail.Length-5], new Vector2(-4f, -5f), -35f, 0.61f, 0.37f, true, -60f, new List<float>(2){30f, -30f}, startSwimCycle:Mathf.PI/2f));
                 something.fList.Add(new Fin(self.tail[self.tail.Length-6], new Vector2(-5f, -8f), -40f, 0.7f, 0.41f, true, -62f, new List<float>(2){-45f, 45f}));
 
-                Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length+something.fList.Count);
-                something.initialFinSprite = sLeaser.sprites.Length-something.fList.Count;
-                for (int i = 0; i < sLeaser.sprites.Length-something.initialFinSprite; i++) {
-                    sLeaser.sprites[something.initialFinSprite + i] = new FSprite("DynamoFin" + (Random.Range(3, 5)).ToString(), false);
-                    sLeaser.sprites[something.initialFinSprite + i].shader = rCam.room.game.rainWorld.Shaders["CicadaWing"];
-                    //The scale x is y and scale y is x because cursed reasons (I loaded the sprites in vertically)
-                    sLeaser.sprites[something.initialFinSprite + i].scaleX = something.fList[i].scaleX;
-                    sLeaser.sprites[something.initialFinSprite + i].scaleY = something.fList[i].scaleY * (something.fList[i].flipped? -1 : 1);
+                something.initialFinSprite = sLeaser.sprites.Length;
+                something.initialGillSprite = sLeaser.sprites.Length+something.fList.Count;
+                self.gills = new PlayerGraphics.AxolotlGills(self, something.initialGillSprite);
+                Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length+something.fList.Count+self.gills.numberOfSprites);
+                self.gills.InitiateSprites(sLeaser, rCam);
+                for (int i = something.initialFinSprite; i < something.initialGillSprite; i++) {
+                    sLeaser.sprites[i] = new FSprite("DynamoFin" + Random.Range(3, 5).ToString(), false) {
+                        shader = rCam.room.game.rainWorld.Shaders["CicadaWing"],
+                        //The scale x is y and scale y is x because cursed reasons (I loaded the sprites in vertically)
+                        scaleX = something.fList[i-something.initialFinSprite].scaleX,
+                        scaleY = something.fList[i-something.initialFinSprite].scaleY * (something.fList[i-something.initialFinSprite].flipped ? -1 : 1)
+                    };
                 }
                 self.AddToContainer(sLeaser, rCam, null);
             }
