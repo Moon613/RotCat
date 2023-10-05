@@ -1,20 +1,11 @@
 using BepInEx;
 using UnityEngine;
-using RWCustom;
 using System.Security;
 using System.Security.Permissions;
 using System;
 using System.Runtime.CompilerServices;
-using Random = UnityEngine.Random;
-using System.Collections.Generic;
-using Steamworks;
 using Fisobs.Core;
-using MoreSlugcats;
-using MonoMod.Cil;
-using System.IO;
-using MonoMod.RuntimeDetour;
-using static System.Reflection.BindingFlags;
-using System.Diagnostics.CodeAnalysis;
+
 
 #pragma warning disable CS0618 // Type or member is obsolete
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -23,7 +14,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Chimeric
 {
-    [BepInPlugin("moon.chimeric", "RotCat", "0.0.2")]
+    [BepInPlugin("moon.chimeric", MOD_NAME, "0.0.2")]
     public class Plugin : BaseUnityPlugin
     {
         public const string MOD_NAME = "Chimerical";
