@@ -2,23 +2,47 @@ using UnityEngine;
 using RWCustom;
 using System;
 using Random = UnityEngine.Random;
-using SlugBase.Assets;
+using SlugBase;
+using System.Runtime.CompilerServices;
 
 namespace Chimeric
 {
     public class SlugRot
     {
+        private static ConditionalWeakTable<RainWorldGame, StrongBox<int>> SpawnFlagTimer = new ConditionalWeakTable<RainWorldGame, StrongBox<int>>();
         public static void Apply() {
-            On.Player.Update += SlugRot.PlayerUpdate;
+            On.Player.Update += PlayerUpdate;
+            On.Player.Die += PlayerDie;
+            On.RainWorldGame.ctor += RainWorldGame_ctor;
+        }
+        private static void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager) {
+            orig(self, manager);
+            if (self.session is StoryGameSession currentSession && currentSession.game.StoryCharacter.value == Plugin.ROT_NAME) {
+                SpawnFlagTimer.Add(self, new StrongBox<int>(0));
+            }
         }
         public static void PlayerUpdate(On.Player.orig_Update orig, Player self, bool eu)
         {
             orig(self, eu);
+            #region Cycle 0 spawn intro for campaign
+            if (self.room != null && self.room.game.session is StoryGameSession && self.room.game.rainWorld.progression?.currentSaveState.saveStateNumber.value == Plugin.ROT_NAME && self.room.game.rainWorld.progression.currentSaveState.cycleNumber == 0 && SpawnFlagTimer.TryGetValue(self.room.game, out var localTimer) && localTimer.Value <= 320) {
+                self.SuperHardSetPosition(self.room.MiddleOfTile(29 + 4*self.playerState.playerNumber, localTimer.Value==0? 75 : 120));
+                foreach (BodyChunk chunk in self.bodyChunks) {
+                    chunk.vel = localTimer.Value < 320? Vector2.zero : new Vector2(0f, -7.5f);
+                }
+                self.Stun(170);
+                if (self.playerState.playerNumber == 0) { localTimer.Value++; }
+            }
+            #endregion
             if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
                 //Debug.Log(self.mainBodyChunk.pos);
-                if (Input.GetKey(KeyCode.Y)) SlugBase.Assets.CustomSlideshow.NewOutro(self.room.game.manager, "slugrot_outro", "slugrot_sleep");
+                if (Input.GetKey(KeyCode.Y)) {
+                    // SlugBase.Assets.CustomScene.SetSelectMenuScene((self.abstractCreature.world.game.session as StoryGameSession)?.saveState, new ("slugrot_sleep"));
+                    // Debug.Log("Set new menu");
+                    Debug.Log($"Position: {self.mainBodyChunk.pos}");
+                }
                 self.scavengerImmunity = 9999;  //Might want to add a system that calculates this based on rep, since you should be able to become friends if you want
-                something.overrideControls = Input.GetKey(ChimericOptions.tentMovementLeft.Value) || Input.GetKey(ChimericOptions.tentMovementRight.Value) || Input.GetKey(ChimericOptions.tentMovementDown.Value) || Input.GetKey(ChimericOptions.tentMovementUp.Value);
+                something.overrideControls = Input.GetKey(ChimericOptions.TentMovementLeft.Value) || Input.GetKey(ChimericOptions.TentMovementRight.Value) || Input.GetKey(ChimericOptions.TentMovementDown.Value) || Input.GetKey(ChimericOptions.TentMovementUp.Value);
                 if (something.grabWallCooldown > 0) { //Doesn't do anything right now, need to get it to play nice with the logic first     //New note, this will probably go unused.
                     something.grabWallCooldown -= 0.5f;
                 }
@@ -28,35 +52,30 @@ namespace Chimeric
                 if (something.smolHearingCooldown > 0) {
                     something.smolHearingCooldown--;
                 }
-                //This whole bit controls the lengthening of the tentacles when the player is standing still, or moving too much
-                Functions.TentacleRetraction(self, something);
-
-                //The same, but for the decorative tentacles which have slightly different parameters to follow.
-                foreach (Tentacle tentacle in something.decorativeTentacles) {
-                    int pointer = Array.IndexOf(something.decorativeTentacles, tentacle);
-                    Vector2 direction = self.mainBodyChunk.pos - self.bodyChunks[1].pos;
-                    Vector2 dirNormalized = direction.normalized;
-                    Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
-                    foreach (Point p in tentacle.pList)
-                    {
-                        if (!p.locked && self.room != null) {
-                            Vector2 positionBeforeUpdate = p.pos;
-                            p.pos += (p.pos - p.lastPos) * Random.Range(0.9f,1.1f);
-                            p.pos += (Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f));
-                            p.lastPos = positionBeforeUpdate;
-                        }
-                        if (Array.IndexOf(tentacle.pList, p) == 0) {
-                            p.locked = true;
-                            p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
-                        }
-                        if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1) {
-                            p.locked = true;
-                            p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
-                        }
+                if (something.swimTimer > 0) {
+                    something.swimTimer--;
+                    Debug.Log($"Lowered rotcat swimTimer {something.swimTimer}");
+                }
+                if (something.stuckCreature != null) {
+                    //Debug.Log($"Caught Creature is {something.stuckCreature.PhysObject}");
+                    something.stuckCreature.Update(self.evenUpdate);
+                    if (/*Input.GetKey(ChimericOptions.GrabButton.Value)*/ self.input[0].pckp && something.stuckCreature != null && something.stuckCreature?.PhysObject != null && self.Consious && something.swimTimer == 0) {
+                        something.stuckCreature.ChangeOverlap(true);
+                        something.stuckCreature.Deactivate();
+                        #pragma warning disable CS8625
+                        something.stuckCreature.PhysObject = null;
+                        something.stuckCreature.Player = null;
+                        #pragma warning restore CS8625
+                        something.stuckCreature = null;
+                        something.swimTimer += 10;
+                        self.room?.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Release_Creature, something.tentacles[0].EndOfTentaclePos);
+                        Debug.Log("Dropped creature");
                     }
                 }
+                //This whole bit controls the length of the tentacles
+                Functions.TentacleRetraction(self, something);
 
-                if (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value)) {
+                if ((Input.GetKey(ChimericOptions.TentMovementEnable.Value) || Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value)) && !self.dead) {
                     Functions.PrimaryTentacleAndPlayerMovement(something, self);
                     float startPos = Functions.FindPos(something.overrideControls, self);    //Finds the position around the player to start, based on Sine and Cosine intervals of pi/4
                     Functions.TentaclesFindPositionToGoTo(something, self, startPos);
@@ -64,23 +83,16 @@ namespace Chimeric
                 }
                 else {
                     something.automateMovement = false;
-                    if (something.stuckCreature != null && something.stuckCreature.PhysObject != null) {
-                        something.stuckCreature.ChangeOverlap(true);
-                        something.stuckCreature.Deactivate();
-                        something.stuckCreature.PhysObject = null;
-                        something.stuckCreature.Player = null;
-                        something.stuckCreature = null;
-                    }
                 }
                 #region What to do if the player is not dead but also not using tentacles for movement
                 if (!something.automateMovement && !self.dead) {
-                    for (int i = (Input.GetKey(ChimericOptions.tentMovementEnable.Value) || Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))?1:0; i < something.tentacles.Length; i++) {
+                    for (int i = (Input.GetKey(ChimericOptions.TentMovementEnable.Value) || Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value))?1:0; i < something.tentacles.Length; i++) {
                         float xPos=0, yPos=20;
                         switch (i)
                         {
                             case 0:
-                                xPos = -20;
-                                yPos = 17;
+                                xPos = -20 - (something.stuckCreature?.PhysObject == null? 0f : something.stuckCreature.PhysObject.realizedObject.bodyChunks[something.stuckCreature.ConnectedChunk].rad - 10);
+                                yPos = 17 + (something.stuckCreature?.PhysObject == null? 0f : something.stuckCreature.PhysObject.realizedObject.bodyChunks[something.stuckCreature.ConnectedChunk].rad + 10);
                                 break;
                             case 1:
                                 xPos = 18;
@@ -95,8 +107,8 @@ namespace Chimeric
                                 yPos = -4;
                                 break;
                         }
-                        if (self.bodyMode == Player.BodyModeIndex.CorridorClimb) { xPos *= 0.15f; }
-                        something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos = Vector2.Lerp(
+                        if (self.bodyMode == Player.BodyModeIndex.CorridorClimb) { xPos *= 0.1f; yPos = (i==0||i==2)? yPos-13:yPos; }
+                        something.tentacles[i].pList[something.tentacles[i].TipIndex-1].pos = Vector2.Lerp(
                         Functions.RotateAroundPoint(self.mainBodyChunk.pos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 
                         Functions.RotateAroundPoint(self.mainBodyChunk.lastPos, new Vector2(xPos, yPos), -Custom.VecToDeg(self.mainBodyChunk.Rotation)), 0.5f);
                     }
@@ -116,15 +128,16 @@ namespace Chimeric
                     }
                 }
                 //Physics for the sticks of all tentacles, which affects the points
-                int numIterations = 10;
-                if (self.room?.abstractRoom.name == "SB_L01") {numIterations=1;}
+                int numIterations = self.room?.abstractRoom.name == "SB_L01" ? 1 : 10;
                 for (int i = 0; i < numIterations; i++) {
-                    Tentacle[][] totalTentacles = {something.tentacles, something.decorativeTentacles};
+                    Tentacle[][] totalTentacles = new Tentacle[][]{something.tentacles, something.decorativeTentacles};
                     Functions.StickCalculations(totalTentacles, self);
                 }
             }
         }
         public static void RotCtor(Player self, PlayerEx something) {
+            self.slugcatStats.runspeedFac = 0.65f;
+            self.slugcatStats.corridorClimbSpeedFac = 1.2f;
             //self.abstractCreature.tentacleImmune = true;
             something.totalCircleSprites = something.circleAmmount * 4;
             something.tentacles[0] = new Tentacle();
@@ -152,7 +165,7 @@ namespace Chimeric
                     tentacle.pList[i].lastPos = new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-i);
                 }
                 tentacle.sList = new PointConnection[something.segments-1];
-                for (int i = 0; i < tentacle.pList.Length-1; i++) {
+                for (int i = 0; i < tentacle.TipIndex-1; i++) {
                     tentacle.sList[i] = new PointConnection(tentacle.pList[i], tentacle.pList[i+1], 9.25f);
                 }
                 tentacle.cList = new Circle[something.circleAmmount];//Hard-coded bumps here      Make sure to actually change the index they're being put in if copying
@@ -181,17 +194,27 @@ namespace Chimeric
             //Adds points and sticks to the decorative tentacles
             foreach (var tentacle in something.decorativeTentacles) {
                 tentacle.pList = new Point[something.decorationSegments];
-                for (int i = 0; i < tentacle.pList.Length; i++) {
-                    tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0||i==(tentacle.pList.Length-1)?true:false);
+                for (int i = 0; i < tentacle.TipIndex; i++) {
+                    tentacle.pList[i] = new Point(self.graphicsModule, new Vector2(self.mainBodyChunk.pos.x, self.mainBodyChunk.pos.y-1-i), i==0||i==(tentacle.TipIndex-1)?true:false);
                 }
-                tentacle.sList = new PointConnection[tentacle.pList.Length-1];
-                for (int i = 0; i < tentacle.pList.Length-1; i++) {
+                tentacle.sList = new PointConnection[tentacle.TipIndex-1];
+                for (int i = 0; i < tentacle.TipIndex-1; i++) {
                     tentacle.sList[i] = new PointConnection(tentacle.pList[i], tentacle.pList[i+1], 5f);
                 }
                 tentacle.decoPushDirection = Vector2.right * Random.Range(-0.7f,0.7f) * 0;  //Curently unused because it doesn't look the best. To enable change the 0 to something.decorativeTentacles[i].decoPushDirection *I think
             }
-            self.slugcatStats.runspeedFac = 0.65f;
-            self.slugcatStats.corridorClimbSpeedFac = 1.2f;
+        }
+        public static void PlayerDie(On.Player.orig_Die orig, Player self) {
+            if (self != null && Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot && something.stuckCreature != null) {
+                something.stuckCreature.ChangeOverlap(true);
+                something.stuckCreature.Deactivate();
+                #pragma warning disable CS8625
+                something.stuckCreature.PhysObject = null;
+                something.stuckCreature.Player = null;
+                #pragma warning restore CS8625
+                something.stuckCreature = null;
+            }
+            orig(self);
         }
     }
 }
