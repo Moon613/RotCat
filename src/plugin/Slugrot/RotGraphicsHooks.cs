@@ -1,35 +1,20 @@
 using UnityEngine;
 using RWCustom;
 using System;
-using SlugBase;
-using System.Linq;
 
 namespace Chimeric
 {
     public static class RotGraphicsHooks {
         public static void Apply() {
-            On.PlayerGraphics.InitiateSprites += RotGraphicsHooks.RotInitiateSprites;
-            On.PlayerGraphics.DrawSprites += RotGraphicsHooks.RotDrawSprites;
-            On.PlayerGraphics.AddToContainer += RotGraphicsHooks.RotAddToContainer;
+            On.PlayerGraphics.InitiateSprites += RotInitiateSprites;
+            On.PlayerGraphics.DrawSprites += RotDrawSprites;
+            On.PlayerGraphics.AddToContainer += RotAddToContainer;
         }
         public static void RotInitiateSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam) {
             //base.Logger.LogDebug("Initiating Sprites");
             orig(self, sLeaser, rCam);
             //base.Logger.LogDebug(sLeaser.sprites.Length);
-            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
-            if (something.isRot) {
-                something.rotEyeColor = new Color((float)27/255, (float)11/255, (float)253/255);
-                if (self.useJollyColor) {
-                    something.rotEyeColor = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
-                }
-                else if (!PlayerGraphics.CustomColorsEnabled()) {
-                    SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.ROT_NAME).ToList()[0], out SlugBaseCharacter chara);
-                    SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
-                    something.rotEyeColor = colors[2].GetColor(self.player.playerState.playerNumber);
-                }
-                else if (PlayerGraphics.CustomColorsEnabled()) {
-                    something.rotEyeColor = PlayerGraphics.CustomColorSafety(2);
-                }
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isRot) {
                 something.faceAtlas = Futile.atlasManager.LoadAtlas("atlases/RotFace");
                 Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2 /*Multiply by 2 for the X sprites for each one*/));
                 something.initialBodyRotSprite = sLeaser.sprites.Length - (something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2));
@@ -46,8 +31,8 @@ namespace Chimeric
                 for (int i = 0; i < something.initialDecoLegSprite-something.initialCircleSprite; i++) {
                     int length = something.initialDecoLegSprite-something.initialCircleSprite;
                     int posInTentList = i<(length/4)?  0:i<(length/2)?  1:i<(3*length/4)?  2:3;
-                    int correctPos = i<(length/4)?  i:i<(length/2)?  i-(length/4):i<(3*length/4)?  i-(length/2):i-(3*length/4);//Wildly assumes this will always work
-                    sLeaser.sprites[something.initialCircleSprite + i] = new FSprite("Circle20", false);//Maybe make a list of the sizes I want bumps to be for use here
+                    int correctPos = i<(length/4)?  i:i<(length/2)?  i-(length/4):i<(3*length/4)?  i-(length/2):i-(3*length/4);
+                    sLeaser.sprites[something.initialCircleSprite + i] = new FSprite("Circle20", false);
                     //base.Logger.LogDebug("Circle Sprite Editing");
                     //base.Logger.LogDebug(length);
                     //base.Logger.LogDebug(i);
@@ -80,10 +65,9 @@ namespace Chimeric
         }
         public static void RotDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos) {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
-            if (something.isRot) {
-                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.enableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == Plugin.ROT_NAME) {
-                    Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, Plugin.vignetteEffect.color, camPos);
+            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isRot) {
+                if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.EnableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == Plugin.ROT_NAME) {
+                    Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, camPos, Plugin.vignetteEffect.color);
                 }
                 //base.Logger.LogDebug(self.player.flipDirection);
                 Functions.DrawFace(something, sLeaser, sLeaser.sprites[9]?.element?.name);
@@ -97,29 +81,27 @@ namespace Chimeric
                 //base.Logger.LogDebug(length);
                 for (float i = 0; i < length; i+=1) {   //Assigns the circle sprites into groups based on which leg they are connected to, so looping through them later is simpler. At least, this way made sense when I first did it
                     if (i+1 <= length/4) {
-                        Array.Resize<FSprite>(ref tentacle1Circles, tentacle1Circles.Length+1);
+                        Array.Resize(ref tentacle1Circles, tentacle1Circles.Length+1);
                         tentacle1Circles[tentacle1Circles.Length-1] = sLeaser.sprites[(int)i+something.initialCircleSprite];
                     }
                     else if (i+1 <= length/2) {
-                        Array.Resize<FSprite>(ref tentacle2Circles, tentacle2Circles.Length+1);
+                        Array.Resize(ref tentacle2Circles, tentacle2Circles.Length+1);
                         tentacle2Circles[tentacle2Circles.Length-1] = sLeaser.sprites[(int)i+something.initialCircleSprite];
                     }
                     else if (i+1 <= length*3/4) {
-                        Array.Resize<FSprite>(ref tentacle3Circles, tentacle3Circles.Length+1);
+                        Array.Resize(ref tentacle3Circles, tentacle3Circles.Length+1);
                         tentacle3Circles[tentacle3Circles.Length-1] = sLeaser.sprites[(int)i+something.initialCircleSprite];
                     }
                     else if (i+1 <= length) {
-                        Array.Resize<FSprite>(ref tentacle4Circles, tentacle4Circles.Length+1);
+                        Array.Resize(ref tentacle4Circles, tentacle4Circles.Length+1);
                         tentacle4Circles[tentacle4Circles.Length-1] = sLeaser.sprites[(int)i+something.initialCircleSprite];
                     }
                 }
-                Functions.DrawTentacleCircles(something, camPos, tentacle1Circles, tentacle2Circles, tentacle3Circles, tentacle4Circles);
+                Functions.DrawTentacleCircles(self, something, camPos, tentacle1Circles, tentacle2Circles, tentacle3Circles, tentacle4Circles);
                 
                 //Colors all additional leg sprites DLL leg color, or the custom color chosen
-                Color initialColor = sLeaser.sprites[0].color;
-                if (!rCam.room.game.IsArenaSession && PlayerGraphics.CustomColorsEnabled()) {
-                    initialColor = PlayerGraphics.CustomColorSafety(0);
-                }
+                Color initialColor = SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 0);
+                Color rotBulbColor = SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 2);
 
                 for (int i = something.initialLegSprite; i < something.endOfsLeaser; i++)
                 {
@@ -140,7 +122,7 @@ namespace Chimeric
                             Mathf.Clamp(r, 0f, 1f);
                             Mathf.Clamp(g, 0f, 1f);
                             Mathf.Clamp(b, 0f, 1f);*/
-                            triMesh1.verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
+                            triMesh1.verticeColors[j] = Color.Lerp(initialColor, rotBulbColor, Mathf.Pow(j-70f,1.5f)/Mathf.Pow(30f,1.5f));//new Color(r, g, b);
                         }
                     }
                 }
@@ -149,10 +131,10 @@ namespace Chimeric
                 for (int i = something.initialDecoLegSprite; i < something.initialLegSprite; i++) {
                     for (int j = 0; j < (sLeaser.sprites[i] as TriangleMesh)?.verticeColors.Length; j++) {
                         if (j <= 20 && sLeaser.sprites[i] is TriangleMesh triMesh) {
-                            triMesh.verticeColors[j] = Color.Lerp(initialColor, something.rotEyeColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
+                            triMesh.verticeColors[j] = Color.Lerp(initialColor, rotBulbColor, Mathf.Pow(j,1.5f)/Mathf.Pow(20f,1.5f)); //new Color((float)27/255, (float)11/255, j>=5? (float)(33+(4*(j-5)))/255 : (float)(33+(4*(5-j)))/255);//Need fixing, technically doesn't do the right colors
                         }
                         else if (sLeaser.sprites[i] is TriangleMesh triMesh1) {
-                            triMesh1.verticeColors[j] = Color.Lerp(something.rotEyeColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
+                            triMesh1.verticeColors[j] = Color.Lerp(rotBulbColor, initialColor, Mathf.Pow(j-20f,1.5f)/Mathf.Pow(20f,1.5f));
                         }
                     }
                 }
@@ -230,7 +212,7 @@ namespace Chimeric
                     sLeaser.sprites[i].SetPosition(something.rList[k].chunk1.GetPosition() + (vecNormalized * something.rList[k].offset.y) + (perpendicularVector * something.rList[k].offset.x));
                     sLeaser.sprites[i].scale = something.rList[k].scale;
                     if (k < i - something.initialBodyRotSprite) {
-                        sLeaser.sprites[i].color = something.rotEyeColor;
+                        sLeaser.sprites[i].color = rotBulbColor;
                     }
                     //sLeaser.sprites[i].color = something.rotEyeColor;
                 }

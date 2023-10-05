@@ -10,14 +10,14 @@ namespace Chimeric
     }
     public static class ConversationID {
         public static void RegisterValues() {
-            ConversationID.PebblesMeetRot = new Conversation.ID("PebblesMeetRot", true);
+            PebblesMeetRot = new Conversation.ID("PebblesMeetRot", true);
         }
         [AllowNull] public static Conversation.ID PebblesMeetRot;
     }
     public static class SoundEnums
     {
         public static void RegisterValues() {
-            SoundEnums.Silence = new SoundID("Silence", true);
+            Silence = new SoundID("Silence", true);
         }
         [AllowNull] public static SoundID Silence;
     }
