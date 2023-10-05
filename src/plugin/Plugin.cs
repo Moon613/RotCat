@@ -26,16 +26,17 @@ namespace Chimeric
     [BepInPlugin("moon.chimeric", "RotCat", "0.0.2")]
     public class Plugin : BaseUnityPlugin
     {
-        bool init = false;
-        public static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new ConditionalWeakTable<Player, PlayerEx>();
-        public static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new ConditionalWeakTable<Spark, SparkEx>();
-        public static ConditionalWeakTable<AbstractCreature, CreatureEx> creatureYummersSprites = new ConditionalWeakTable<AbstractCreature, CreatureEx>();
+        public const string MOD_NAME = "Chimerical";
+        internal bool init = false;
+        internal static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new ConditionalWeakTable<Player, PlayerEx>();
+        internal static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new ConditionalWeakTable<Spark, SparkEx>();
+        internal static ConditionalWeakTable<AbstractCreature, CreatureEx> CreatureCWT = new ConditionalWeakTable<AbstractCreature, CreatureEx>();
         public static FContainer darkContainer = new FContainer();
-        public static FSprite? vignetteEffect;
-        public static bool appliedVignette = false;
+        internal static FSprite? vignetteEffect;
+        internal static bool appliedVignette = false;
         public static ChimericOptions? ChimericOptions;
-        bool configWorking = false;
-        public static bool loaded = false;
+        internal static bool loaded = false;
+        internal static bool rotund = false;
         public const string ROT_NAME = "slugrot";
         public const string DYNAMO_NAME = "dynamo";
         public const string DRACO_NAME = "draco";
@@ -49,23 +50,14 @@ namespace Chimeric
             CreatureImmunities.Apply();
             RotGraphicsHooks.Apply();
             Vignette.Apply();
-            DigestionRotSprites.Apply();
+            CorruptionRotSpritesControl.Apply();
             CalmTentacles.Apply();
             SlugRot.Apply();
             Dynamo.Apply();
-            DynamoWhiskers.Hooks();
             On.Player.ctor += PlayerCtor;
-
-
-
-            // Can be used to change sleep screen stuff, may end up using this later
-            /*On.Menu.MenuScene.BuildScene += (orig, self) => {
-                orig(self);
-                if (self.sceneID == MenuScene.SceneID.SleepScreen)
-                {
-                    self.depthIllustrations[3] = new Menu.MenuDepthIllustration(self.menu, self, "Scenes" + Path.DirectorySeparatorChar.ToString() + "Sleep Screen - white", "Sleep - 2 - white", new Vector2(0f, 0f), 1.7f, Menu.MenuDepthIllustration.MenuShader.Normal);
-                }
-            };*/
+            POMSunrays.RegisterLightrays();
+            POMDarkness.RegisterDarkness();
+            // DevCommOverride.Apply();
 
             On.Spark.AddToContainer += (orig, self, sLeaser, rCam, newContainer) => {   //Shouldn't ever cause issues, just adds Spark sprites to the darkContainer if they are created by CreaturePing
                 if (sparkLayering.TryGetValue(self, out SparkEx spark) && spark.isHearingSpark) {
