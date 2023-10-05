@@ -1,5 +1,6 @@
 using RWCustom;
 using UnityEngine;
+using SlugBase.DataTypes;
 
 namespace Chimeric
 {
@@ -50,7 +51,7 @@ namespace Chimeric
 			sLeaser.sprites[0].y = Mathf.Lerp(this.lastPos.y, this.pos.y, timeStacker) - camPos.y;
 			float between0And1 = Mathf.Lerp(this.lastLife, this.life, timeStacker);
 			float between0And0Point75 = Mathf.InverseLerp(0f, 0.75f, between0And1);
-			sLeaser.sprites[0].color = Color.Lerp((between0And0Point75 > 0.5f) ? PlayerGraphics.SlugcatColor(owner.slugcatStats.name)/*GetColor*/ : this.blackCol, Color.Lerp(this.blackCol, this.col, 0.5f + 0.5f * this.intensity), Mathf.Sin((between0And0Point75+0.15f) * 3.1415927f));  //Controls the color flashing, per normal Update. Lerps between either the Player's color or black based on between0And0Point75, and not quite white
+			sLeaser.sprites[0].color = Color.Lerp((between0And0Point75 > 0.5f) ? PlayerColor.GetCustomColor(owner.graphicsModule as PlayerGraphics, 0) : this.blackCol, Color.Lerp(this.blackCol, this.col, 0.5f + 0.5f * this.intensity), Mathf.Sin((between0And0Point75+0.15f) * 3.1415927f));  //Controls the color flashing, per normal Update. Lerps between either the Player's color or black based on between0And0Point75, and not quite white
 			float scaleOfSprite = Mathf.Lerp(this.lastRad, this.rad, timeStacker);
 			sLeaser.sprites[0].scale = scaleOfSprite / 8f;
 			sLeaser.sprites[0].alpha = Mathf.Sin(Mathf.Pow(between0And1, 2f) * 3.1415927f) * 2f / scaleOfSprite;

@@ -1,5 +1,6 @@
 using System;
 using RWCustom;
+using SlugBase.DataTypes;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -45,22 +46,13 @@ namespace Chimeric
 			}
 			if (this.freeFloating && Random.value < 0.5f)
 			{
-				this.hollow = (Random.value < 0.5f);
+				this.hollow = Random.value < 0.5f;
 			}
 			if (this.room.GetTile(this.pos).Terrain == Room.Tile.TerrainType.Solid)
 			{
 				this.lifeTime = Math.Min(1, this.lifeTime - 5);
 			}
-			bool flag;
-			if (ModManager.MSC)
-			{
-				flag = this.room.PointSubmerged(this.pos);
-			}
-			else
-			{
-				flag = (this.pos.y < this.room.FloatWaterLevel(this.pos.x));
-			}
-			if (flag)
+			if ((ModManager.MSC && this.room.PointSubmerged(this.pos)) || (!ModManager.MSC && this.pos.y < this.room.FloatWaterLevel(this.pos.x)))
 			{
 				this.vel *= 0.9f;
 				this.vel.y = this.vel.y + 4f;
@@ -101,8 +93,8 @@ namespace Chimeric
 			float num = 0.625f * Mathf.Lerp(Mathf.Lerp(Mathf.Sin(3.1415927f * this.lastLife), this.lastLife, 0.5f), Mathf.Lerp(Mathf.Sin(3.1415927f * this.life), this.life, 0.5f), timeStacker);
 			sLeaser.sprites[0].x = Mathf.Lerp(this.lastPos.x, this.pos.x, timeStacker) - camPos.x;
 			sLeaser.sprites[0].y = Mathf.Lerp(this.lastPos.y, this.pos.y, timeStacker) - camPos.y;
-			sLeaser.sprites[0].color = Color.Lerp(PlayerGraphics.SlugcatColor(owner.slugcatStats.name)/*GetColor*/, Color.blue, Mathf.InverseLerp(2f, 7f, (float)this.freeCounter + timeStacker));
-			float num2 = (sLeaser.sprites[0].color.r + sLeaser.sprites[0].color.g + (1f - sLeaser.sprites[0].color.b)) / 3f;
+			sLeaser.sprites[0].color = Color.Lerp(PlayerColor.GetCustomColor(owner.graphicsModule as PlayerGraphics, 0), PlayerColor.GetCustomColor(owner.graphicsModule as PlayerGraphics, 2), Mathf.InverseLerp(2f, 7f, (float)this.freeCounter + timeStacker));
+			float num2 = (sLeaser.sprites[0].color.r + sLeaser.sprites[0].color.g + sLeaser.sprites[0].color.b) / 3f;
 			int num3 = 0;
 			if (this.hollow)
 			{
