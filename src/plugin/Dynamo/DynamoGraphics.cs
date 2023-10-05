@@ -100,24 +100,23 @@ namespace Chimeric
                         self.tail[4].vel.x = 1.495f;
                         //self.tail[6].vel.x = 0.8f;
                     }
-                    if (something.canPlayShockSound) {
+                    if (something.canPlayShockSound == 0) {
                         self.player.room.PlaySound(SoundID.Centipede_Electric_Charge_LOOP, self.player.mainBodyChunk.pos, 1f, 1f);
-                        something.canPlayShockSound = false;
                     }
+                    something.canPlayShockSound = 60;
                     for (int i = 0; i < self.player.room.abstractRoom.creatures.Count; i++) {
-                        if (Plugin.creatureYummersSprites.TryGetValue(self.player.room.abstractRoom.creatures[i].realizedCreature, out var thing)) {
+                        if (Plugin.CreatureCWT.TryGetValue(self.player.room.abstractRoom.creatures[i], out var thing)) {
                             thing.shouldFearDynamo = true;
                             if (thing.fearTime == -1) {
-                                thing.fearTime = ChimericOptions.scareDuration.Value;
+                                thing.fearTime = ChimericOptions.ScareDuration.Value;
                             }
                             //Debug.Log("Should be fearing dyno");
                         }
                     }
                 }
-                else if (!something.canPlayShockSound) {
-                    something.canPlayShockSound = true;
+                else if (something.canPlayShockSound == 0) {
                     for (int i = 0; i < self.player.room.abstractRoom.creatures.Count; i++) {
-                        if (Plugin.creatureYummersSprites.TryGetValue(self.player.room.abstractRoom.creatures[i].realizedCreature, out var thing)) {
+                        if (Plugin.CreatureCWT.TryGetValue(self.player.room.abstractRoom.creatures[i], out var thing)) {
                             thing.shouldFearDynamo = false;
                             thing.fearTime = -1;
                             //Debug.Log("Should not be fearing dyno");
@@ -134,8 +133,13 @@ namespace Chimeric
                 #endregion
                 
                 #region Roll Animation for tail and killing things
-                if (self.player.animation == Player.AnimationIndex.Roll) {
-                    for (int i = 0; i < self.tail.Length; i++)
+                // Set the correct flip direction, this is not set during flips so that the tail rotation is consistent with the body rotation. However, this may not be a good enough fix, so do not be surprised if issues pop up, but a solution is probably having a prevPrevAnimation and using that here too.
+                if (self.player.canJump == 0 && self.player.allowRoll == 15) {
+                    self.player.flipDirection = something.initialFlipDirection;
+                }
+                if (self.player.animation == Player.AnimationIndex.Roll || self.player.animation == Player.AnimationIndex.Flip) {
+                    // Animation bit
+                    for (int i = 1; i < self.tail.Length; i++)
                     {
                         float startVel = Custom.VecToDeg(Custom.DirVec(self.tail[i].pos, self.tail[i-1].pos));
                         startVel += 45 * -something.initialFlipDirection;
@@ -152,9 +156,13 @@ namespace Chimeric
                             if (Custom.DistLess(chunk.pos, self.tail[self.tail.Length - 2].pos, 55f) && crit != self.player && (crit is not Player || ChimericOptions.FriendlyFire.Value)) {
                                 crit.Violence(self.player.mainBodyChunk, null, chunk, null, Creature.DamageType.Blunt, 0.4f, 100f);
                                 crit.SetKillTag(self.player.abstractCreature);
-                                chunk.vel += new Vector2(ChimericOptions.yeetusMagnitude.Value * self.player.flipDirection, 19f) / (chunk.mass * 3f);
-                                Debug.Log($"{crit.Template.type} was launched by Dynamo");
-                                Debug.Log($"{chunk.mass} and {chunk.vel}");
+                                chunk.vel += new Vector2(ChimericOptions.YeetusMagnitude.Value * Mathf.Sign(Custom.DirVec(self.player.bodyChunks[1].pos, self.tail[self.tail.Length-2].pos).x), Random.Range(-1f, 19f)) / crit.TotalMass;
+                                self.player.room.PlaySound(SoundID.Slugcat_Terrain_Impact_Hard, chunk.pos, 0.9f, 0.8f);
+                                for (int j = 0; j < 10; j++) {
+                                    self.player.room.AddObject(new Spark(self.tail[self.tail.Length-2].pos, Custom.DegToVec(Custom.VecToDeg(chunk.vel) + Random.Range(-45f, 45f)) * Random.Range(0.9f, 2.6f), Color.white, null, 5, 20));
+                                }
+                                // Debug.Log($"{crit.Template.type} was launched by Dynamo");
+                                // Debug.Log($"Chunk Mass {chunk.mass}, Total mass {crit.TotalMass}, and velocity {chunk.vel}");
                             }
                         }
                     }
@@ -248,6 +256,7 @@ namespace Chimeric
                     rCam.ReturnFContainer("Midground").AddChild(sLeaser.sprites?[something.initialFinSprite + i]);
                     sLeaser.sprites?[something.initialFinSprite + i].MoveBehindOtherNode(sLeaser.sprites[0]);
                 }
+                self.gills.AddToContainer(sLeaser, rCam, rCam.ReturnFContainer("Midground"));
             }
         }
         public static void PlayerGraphics_DrawSpritesTail(ILContext il) //Copied from DMS tail method

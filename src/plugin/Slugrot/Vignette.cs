@@ -17,29 +17,28 @@ namespace Chimeric
             On.Creature.SuckedIntoShortCut += RotCatSuckIntoShortcut;
             On.Creature.SpitOutOfShortCut += RotCatSpitOutOfShortcut;
         }
-        public static float defaultVignetteSize = 0.7f;
         public static void GameSessionStartup(On.GameSession.orig_ctor orig, GameSession self, RainWorldGame game) {
             orig(self, game);
             Debug.Log("Ran Session Startup");
             Futile.stage.AddChild(Plugin.darkContainer);
-            if (ChimericOptions.enableVignette == null) {
+            if (ChimericOptions.EnableVignette == null) {
                 Debug.LogWarning("Vignette Option was null, attempting to give it a band-aid\nCheck Remix Options, or disable and re-enable the mod");
                 try {
-                    ChimericOptions.enableVignette = Plugin.ChimericOptions?.config.Bind("enableVignette", false);
+                    ChimericOptions.EnableVignette = Plugin.ChimericOptions?.config.Bind("enableVignette", false);
                 }
                 catch {
                     Debug.LogWarning($"Attempt failed, retrying...");
                     try {
-                        ChimericOptions.enableVignette = new Configurable<bool>(false);
+                        ChimericOptions.EnableVignette = new Configurable<bool>(false);
                     } catch (Exception err) {
                         Debug.LogError($"Vignette did not like the band-aid:\n{err}");
                         Debug.LogException(err);
                     }
                 }
             }
-            if (!Plugin.appliedVignette && ChimericOptions.enableVignette?.Value == true && self is StoryGameSession && !self.game.rainWorld.safariMode) {
+            if (!Plugin.appliedVignette && ChimericOptions.EnableVignette?.Value == true && self is StoryGameSession && !self.game.rainWorld.safariMode) {
                 Plugin.vignetteEffect = new FSprite("Futile_White", true);
-                Functions.UpdateVignette(new Color(0.5f, 0.5f, 0.55f, defaultVignetteSize), false);  //r & g are the position of the vignette inside the square. b is the intensity/radius and a is the alpha/fade radius
+                Functions.UpdateVignette(new Color(0f, 0f, 0f, 1), new Color(0, 0, 0, 0.2f), false);
                 Plugin.vignetteEffect.SetPosition(new Vector2(game.rainWorld.screenSize.x/2f, game.rainWorld.screenSize.y/2f));
                 Plugin.vignetteEffect.scaleX = 86f; //90    //86
                 Plugin.vignetteEffect.scaleY = 86f; //60    //48
@@ -59,22 +58,19 @@ namespace Chimeric
         }
         public static void CystsReacts(On.Room.orig_InGameNoise orig, Room self, InGameNoise noise) {
             orig(self, noise);
-            if (self.game.session.characterStats.name.value == Plugin.ROT_NAME || !self.game.IsStorySession) {
-                PhysicalObject source = noise.sourceObject; 
-                //Debug.Log($"{source} and {source.GetType()}");
-                for (int i = 0; i < self.PlayersInRoom.Count; i++) {
-                    if (source != self.PlayersInRoom[i] && (Plugin.tenticleStuff.TryGetValue(self.PlayersInRoom[i], out PlayerEx player) && player.isRot) && (player.hearingCooldown <= 0 || CalculateMod5PlusMinus1(player.hearingCooldown) || player.hearingCooldown==40) && Custom.Dist(self.PlayersInRoom[i].mainBodyChunk.pos, noise.pos) <= noise.strength*1.5f) {
-                        if (ChimericOptions.enableVignette.Value) {
-                            self.AddObject(new CreaturePing(noise.pos, Color.white, noise.strength/75f, self));
-                            Debug.Log($"name/id is: {self.roomSettings.name}");
-                        }
-                        //Debug.Log($"Add Ping Effect number {i}");
-                        for (int j = 0; j < Random.Range(3,5); j++) {
-                            self.AddObject(new RotCatBubble(self.PlayersInRoom[i], Custom.DirVec(self.PlayersInRoom[0].mainBodyChunk.pos, noise.pos) * 12f / (1f + j * 0.2f), Random.Range(0.85f, 1.15f), Random.value, Random.Range(0f, 0.5f)));
-                            self.AddObject(new RotCatRipple(self.PlayersInRoom[i], noise.pos, default(Vector2), Random.Range(0.7f, 0.8f), Color.white));
-                        }
-                        player.hearingCooldown = 40;
+            PhysicalObject source = noise.sourceObject; 
+            //Debug.Log($"{source} and {source.GetType()}");
+            for (int i = 0; i < self.PlayersInRoom.Count; i++) {
+                if (source != self.PlayersInRoom[i] && Plugin.tenticleStuff.TryGetValue(self.PlayersInRoom[i], out PlayerEx player) && player.isRot && (player.hearingCooldown <= 0 || CalculateMod5PlusMinus1(player.hearingCooldown) || player.hearingCooldown==40) && Custom.Dist(self.PlayersInRoom[i].mainBodyChunk.pos, noise.pos) <= noise.strength*1.5f) {
+                    if (ChimericOptions.EnableVignette.Value) {
+                        self.AddObject(new CreaturePing(noise.pos, Color.white, noise.strength/75f, self));
                     }
+                    //Debug.Log($"Add Ping Effect number {i}");
+                    for (int j = 0; j < Random.Range(6,12); j++) {
+                        self.AddObject(new RotCatBubble(self.PlayersInRoom[i], Custom.DirVec(self.PlayersInRoom[0].mainBodyChunk.pos, noise.pos) * 12f / (1f + j * 0.2f), Random.Range(0.85f, 1.15f), Random.value, Random.Range(0f, 0.5f)));
+                        self.AddObject(new RotCatRipple(self.PlayersInRoom[i], noise.pos, default(Vector2), Random.Range(0.7f, 0.8f), SlugBase.DataTypes.PlayerColor.GetCustomColor(self.PlayersInRoom[i].graphicsModule as PlayerGraphics, 1)));
+                    }
+                    player.hearingCooldown = 40;
                 }
             }
         }
@@ -87,7 +83,7 @@ namespace Chimeric
                         return;
                     }
                     for (int i = 0; i < self.room.PlayersInRoom.Count; i++) {
-                        if (ChimericOptions.enableVignette.Value && Plugin.tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var player1) && player1.isRot && Custom.Dist(self.room.PlayersInRoom[i].mainBodyChunk.pos, controller.pos) < 650 && CalculateMod5PlusMinus1(player1.smolHearingCooldown)) {
+                        if (ChimericOptions.EnableVignette.Value && Plugin.tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var player1) && player1.isRot && Custom.Dist(self.room.PlayersInRoom[i].mainBodyChunk.pos, controller.pos) < 650 && CalculateMod5PlusMinus1(player1.smolHearingCooldown)) {
                             self.room.AddObject(new CreaturePing(controller.pos, Color.white, vol*1.5f, self.room));
                             player1.smolHearingCooldown = 10;
                             break;
@@ -98,14 +94,14 @@ namespace Chimeric
         }
         public static void RotCatSuckIntoShortcut(On.Creature.orig_SuckedIntoShortCut orig, Creature self, IntVector2 entrancePos, bool carriedByOther) {
             orig(self, entrancePos, carriedByOther);
-            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.enableVignette.Value) {
-                Functions.UpdateVignette(new Color(Plugin.vignetteEffect.color.r, Plugin.vignetteEffect.color.g, Plugin.vignetteEffect.color.b, 0f));
+            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
+                Functions.UpdateVignette(Color.black, Color.black);
             }
         }
         public static void RotCatSpitOutOfShortcut(On.Creature.orig_SpitOutOfShortCut orig, Creature self, IntVector2 pos, Room newRoom, bool spitOutAllSticks) {
             orig(self, pos, newRoom, spitOutAllSticks);
-            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.enableVignette.Value) {
-                Functions.UpdateVignette(new Color(Plugin.vignetteEffect.color.r, Plugin.vignetteEffect.color.g, Plugin.vignetteEffect.color.b, defaultVignetteSize));
+            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
+                Functions.UpdateVignette(Color.black, new Color(0f, 0f, 0f, 0.2f));
             }
         }
         public static bool CalculateMod5PlusMinus1(int num) {
