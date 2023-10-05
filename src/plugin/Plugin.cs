@@ -65,11 +65,6 @@ namespace Chimeric
                 }
                 orig(self, sLeaser, rCam, newContainer);
             };
-
-            On.Menu.MainMenu.ctor += (orig, self, manager, showRegionSpecificBkg) => {
-                orig(self, manager, showRegionSpecificBkg);
-                //self.AddMainMenuButton(new Menu.SimpleButton(self, self.pages[0], self.Translate("ROTCAT"), "ROTCAT", Vector2.zero, new Vector2(100f, 30f)), OpenSaysMe, 0);
-            };
             
             On.Menu.Remix.MixedUI.OpTab.ctor += (orig, self, owner, name) => {
                 orig(self, owner, name);
@@ -79,8 +74,6 @@ namespace Chimeric
                     self._container.AddChild(sprite);
                 }
             };
-
-            //POMDarkness.RegisterDarkness();
 
             #region Don't Mind this lol
             /*On.RoomCamera.ctor += (orig, self, game, cameraNumber) => {   //Leftover from when I was doing a slight amount of trolling :3
@@ -161,12 +154,16 @@ namespace Chimeric
                     Debug.Log("Reset timer");
                 }
             };*/
+            // On.Menu.MainMenu.ctor += (orig, self, manager, showRegionSpecificBkg) => {
+                // orig(self, manager, showRegionSpecificBkg);
+                //self.AddMainMenuButton(new Menu.SimpleButton(self, self.pages[0], self.Translate("ROTCAT"), "ROTCAT", Vector2.zero, new Vector2(100f, 30f)), OpenSaysMe, 0);
+            // };
             #endregion
         }
         public static void PlayerCtor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world) {
             orig(self, abstractCreature, world);
-            Plugin.tenticleStuff.Add(self, new PlayerEx());
-            Plugin.tenticleStuff.TryGetValue(self, out var something);
+            tenticleStuff.Add(self, new PlayerEx());
+            tenticleStuff.TryGetValue(self, out var something);
             if (self.slugcatStats.name.value == ROT_NAME) {
                 something.isRot = true;
                 SlugRot.RotCtor(self, something);
@@ -198,29 +195,19 @@ namespace Chimeric
                     //Futile.atlasManager.LoadAtlas("atlases/mane");
                     //Futile.atlasManager.LoadAtlas("atlases/body");
                     Futile.atlasManager.LoadAtlas("atlases/roteye");
-                    ChimericOptions = new ChimericOptions(this, Logger);
-                    MachineConnector.SetRegisteredOI("moon.chimeric", ChimericOptions);
-                    configWorking = true;
-                    AssetBundle? bundle = AssetBundle.LoadFromFile(AssetManager.ResolveFilePath("assetbundles/red"));
-                    if (bundle != null) {
-                        self.Shaders["Red"] = FShader.CreateShader("red", bundle.LoadAsset<Shader>("Assets/red.shader"));
-                    }
-                    else {
-                        Debug.Log("Shitfuckfcukdamnitnotagain");
+                    MachineConnector.SetRegisteredOI("moon.chimeric", new ChimericOptions());
+                    self.Shaders["Red"] = FShader.CreateShader("red", AssetBundle.LoadFromFile(AssetManager.ResolveFilePath("assetbundles/red")).LoadAsset<Shader>("Assets/red.shader"));
+                    self.Shaders["Sunrays"] = FShader.CreateShader("sunrays", AssetBundle.LoadFromFile(AssetManager.ResolveFilePath("assetbundles/sunrays")).LoadAsset<Shader>("Assets/sunrays.shader"));
+                    foreach (var activeMod in ModManager.ActiveMods) {
+                        if (activeMod.id == "willowwisp.bellyplus") {
+                            rotund = true;
+                            Debug.Log("Rotund World found!");
+                            break;
+                        }
                     }
                 } catch (Exception err) {
-                    base.Logger.LogError(err);
-                    configWorking = false;
+                    Logger.LogError(err);
                 }
-            }
-        }
-        public void OpenSaysMe()
-        {
-            if (SteamManager.Initialized && SteamUtils.IsOverlayEnabled()) {
-                SteamFriends.ActivateGameOverlayToWebPage("https://steamcommunity.com/sharedfiles/filedetails/?id=2949461454");
-            }
-            else {
-                Application.OpenURL("https://steamcommunity.com/sharedfiles/filedetails/?id=2949461454");
             }
         }
     }
