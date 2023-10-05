@@ -1,39 +1,39 @@
-
-
 using System;
+using System.Linq;
 using RWCustom;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 namespace Chimeric {
     public static class Functions {
         ///<summary> Find the position for tentacles to start finding connection points at </summary>
         public static float FindPos(bool flag, Player self) {
-            if ((Input.GetKey(ChimericOptions.tentMovementRight.Value) && flag) || (!flag && self.input[0].x == 1)) {
-                if ((Input.GetKey(ChimericOptions.tentMovementUp.Value) && flag) || (!flag && self.input[0].y == 1)) {
+            if ((Input.GetKey(ChimericOptions.TentMovementRight.Value) && flag) || (!flag && self.input[0].x == 1)) {
+                if ((Input.GetKey(ChimericOptions.TentMovementUp.Value) && flag) || (!flag && self.input[0].y == 1)) {
                     return 0;
                 }
                 else {
                     return 7*(float)Math.PI/4;
                 }
             }
-            else if ((Input.GetKey(ChimericOptions.tentMovementUp.Value) && flag) || (!flag && self.input[0].y == 1)) {
-                if ((Input.GetKey(ChimericOptions.tentMovementLeft.Value) && flag) || (!flag && self.input[0].x == -1)) {
+            else if ((Input.GetKey(ChimericOptions.TentMovementUp.Value) && flag) || (!flag && self.input[0].y == 1)) {
+                if ((Input.GetKey(ChimericOptions.TentMovementLeft.Value) && flag) || (!flag && self.input[0].x == -1)) {
                     return (float)Math.PI/2;
                 }
                 else {
                     return (float)Math.PI/4;
                 }
             }
-            else if ((Input.GetKey(ChimericOptions.tentMovementLeft.Value) && flag) || (!flag && self.input[0].x == -1)) {
-                if ((Input.GetKey(ChimericOptions.tentMovementDown.Value) && flag) || (!flag && self.input[0].y == -1)) {
+            else if ((Input.GetKey(ChimericOptions.TentMovementLeft.Value) && flag) || (!flag && self.input[0].x == -1)) {
+                if ((Input.GetKey(ChimericOptions.TentMovementDown.Value) && flag) || (!flag && self.input[0].y == -1)) {
                     return (float)Math.PI;
                 }
                 else {
                     return 3*(float)Math.PI/4;
                 }
             }
-            else if ((Input.GetKey(ChimericOptions.tentMovementDown.Value) && flag) || (!flag && self.input[0].y == -1)) {
-                if ((Input.GetKey(ChimericOptions.tentMovementRight.Value) && flag) || (!flag && self.input[0].x == 1)) {
+            else if ((Input.GetKey(ChimericOptions.TentMovementDown.Value) && flag) || (!flag && self.input[0].y == -1)) {
+                if ((Input.GetKey(ChimericOptions.TentMovementRight.Value) && flag) || (!flag && self.input[0].x == 1)) {
                     return 3*(float)Math.PI/2;
                 }
                 else {
@@ -52,16 +52,16 @@ namespace Chimeric {
             }
         }
         public static void TentacleRetraction(Player self, PlayerEx something) {
-            if (Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value) && something.retractionTimer < 40) {
+            if (Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value) && something.retractionTimer < 40) {
                 something.retractionTimer += 5;
             }
 
             //bool notTooFarNotTooClose = (Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) > 1f && Custom.Dist(something.previousPosition, self.mainBodyChunk.pos) < 3.5f);
 
-            if ((self.dead || /*notTooFarNotTooClose ||*/ Input.GetKey(ChimericOptions.tentMovementEnable.Value)) && something.retractionTimer < 60) {//Change limits back to 1f and 3.5f once testing is done  //no
+            if ((self.dead || /*notTooFarNotTooClose ||*/ Input.GetKey(ChimericOptions.TentMovementEnable.Value)) && something.retractionTimer < 60) {//Change limits back to 1f and 3.5f once testing is done  //nolol
                 something.retractionTimer += 0.5f;
             }
-            else if (something.retractionTimer > 7/*-20*/ && !Input.GetKey(ChimericOptions.tentMovementEnable.Value) && !self.dead) {
+            else if (something.retractionTimer > 7/*-20*/ && !Input.GetKey(ChimericOptions.TentMovementEnable.Value) && !self.dead) {
                 something.retractionTimer -= 0.5f;
             }
             foreach (var tentacle in something.tentacles) {
@@ -76,18 +76,40 @@ namespace Chimeric {
                     }
                 }
             }
-            something.previousPosition = self.mainBodyChunk.pos;
+            foreach (Tentacle tentacle in something.decorativeTentacles) {
+                int pointer = Array.IndexOf(something.decorativeTentacles, tentacle);
+                Vector2 direction = self.mainBodyChunk.pos - self.bodyChunks[1].pos;
+                Vector2 dirNormalized = direction.normalized;
+                Vector2 perpendicularVector = Custom.PerpendicularVector(direction);
+                foreach (var p in tentacle.pList) {
+                    if (!p.locked && self.room != null) {
+                        Vector2 positionBeforeUpdate = p.pos;
+                        p.pos += (p.pos - p.lastPos) * Random.Range(0.9f,1.1f);
+                        p.pos += Vector2.down * self.room.gravity * Random.Range(0.9f,1.1f);
+                        p.lastPos = positionBeforeUpdate;
+                    }
+                    if (Array.IndexOf(tentacle.pList, p) == 0) {
+                        p.locked = true;
+                        p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[pointer*2].y) + (perpendicularVector * something.randomPosOffest[pointer*2].x);
+                    }
+                    if (Array.IndexOf(tentacle.pList, p) == tentacle.pList.Length-1) {
+                        p.locked = true;
+                        p.pos = self.mainBodyChunk.pos + (dirNormalized * something.randomPosOffest[(pointer*2)+1].y) + (perpendicularVector * something.randomPosOffest[(pointer*2)+1].x);
+                    }
+                }
+            }
+            // something.previousPosition = self.mainBodyChunk.pos;
         }
         public static void PrimaryTentacleAndPlayerMovement(PlayerEx something, Player self) {
-            if (Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value) && !Input.GetKey(ChimericOptions.tentMovementEnable.Value)) {
+            if (Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value) && !Input.GetKey(ChimericOptions.TentMovementEnable.Value)) {
                 something.automateMovement = true;
             }
-            if (self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).AnyBeam) && !something.automateMovement) {
+            if (!something.automateMovement && self.room != null && !(self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).Solid || self.room.GetTile(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos).AnyBeam)) {
                 
                 something.tentacles[0].foundSurface = true;
                 
-                int upDown = (Input.GetKey(ChimericOptions.tentMovementUp.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementDown.Value)? -1:0);
-                int rightLeft = (Input.GetKey(ChimericOptions.tentMovementRight.Value)? 1:0) + (Input.GetKey(ChimericOptions.tentMovementLeft.Value)? -1:0);
+                int upDown = (Input.GetKey(ChimericOptions.TentMovementUp.Value)? 1:0) + (Input.GetKey(ChimericOptions.TentMovementDown.Value)? -1:0);
+                int rightLeft = (Input.GetKey(ChimericOptions.TentMovementRight.Value)? 1:0) + (Input.GetKey(ChimericOptions.TentMovementLeft.Value)? -1:0);
                 
                 float dist = Custom.Dist(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos + new Vector2(3*(something.overrideControls? rightLeft:self.input[0].x), 3*(something.overrideControls? upDown:self.input[0].y)), self.mainBodyChunk.pos);
                 if (dist < 300f) {
@@ -95,18 +117,25 @@ namespace Chimeric {
                     if (something.stuckCreature != null && something.stuckCreature.PhysObject.realizedObject is Creature crit) { weight = crit.TotalMass/5f*self.room.gravity; Debug.Log(crit.TotalMass); }
                     something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos += new Vector2(3f*(something.overrideControls? rightLeft:self.input[0].x), 6f*(something.overrideControls? upDown:self.input[0].y) - Mathf.Min(weight, 5f));
                 }
-                if (Input.GetKey(ChimericOptions.grabButton.Value) && something.stuckCreature == null && self.Consious) {
+                if (/*Input.GetKey(ChimericOptions.GrabButton.Value)*/ self.input[0].pckp && something.stuckCreature == null && self.Consious && something.swimTimer == 0) {   // Think I'll remove the grab bind and use the pickup keybind from vanilla
                     for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
+                        foreach (Creature.Grasp grasp in self.grasps) { // skip this creature if it is already being grabbed by the player's normal grasp
+                            if (grasp != null && grasp.grabbedChunk.owner.abstractPhysicalObject == self.room.abstractRoom.creatures[i]) {
+                                goto Skip;
+                            }
+                        }
                         for (int j = 0; j < self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks.Length; j++) {
                             if (Custom.DistLess(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos, self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks[j].pos, 15f) && self.room.abstractRoom.creatures[i].realizedCreature != self) {
                                 something.stuckCreature = new AbstractOnTentacleStick(self.abstractCreature, self.room.abstractRoom.creatures[i], j);
                                 self.room.PlaySound(SoundID.Daddy_And_Bro_Tentacle_Grab_Creature, self.room.abstractRoom.creatures[i].realizedCreature.bodyChunks[j].pos, 1f, 1f);
                                 something.stuckCreature.ChangeOverlap(false);
+                                something.swimTimer = 40;
                                 goto Escape;
                             }
                         }
+                        Skip:;
                     }
-                    Escape:{}
+                    Escape:;
                 }
                 /*else if (dist > 305f) {
                     something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position = Vector2.MoveTowards(something.tentacles[0].pList[something.tentacles[0].pList.Length-1].position, self.mainBodyChunk.pos, 1*self.mainBodyChunk.vel.magnitude);
@@ -117,8 +146,9 @@ namespace Chimeric {
                 //self.wantToJump = 0;
                 self.airFriction = 0.85f;
                 self.customPlayerGravity = 0.2f;
-                if (self.feetStuckPos != null && !Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))  //Stop feet from magnetising to the ground
+                if (self.feetStuckPos != null && !Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value)) {  //Stop feet from magnetising to the ground
                     self.bodyChunks[1].pos = self.feetStuckPos.Value+Vector2.up*2f;
+                }
                 if (!something.automateMovement) {  //If the tentacle is making first contact, make it go to that position
                     something.tentacles[0].iWantToGoThere = something.tentacles[0].pList[something.tentacles[0].pList.Length-1].pos;
                     something.tentacles[0].foundSurface = true;
@@ -131,25 +161,27 @@ namespace Chimeric {
                         connectionsToSurface += 1;
                     }
                 }
-                if (connectionsToSurface == 0 && !(Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value))) {
+                if (connectionsToSurface == 0 && !Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value)) {
                     something.automateMovement = false;
-                    //self.controller = new Player.NullController();
                 }
 
                 #region BodyChunkMovements
                 //Debug.Log(something.timer);
-                if (connectionsToSurface == 0 && Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value) && !Input.GetKey(ChimericOptions.tentMovementEnable.Value)) {
-                    self.customPlayerGravity = 0.2f;
+                if (connectionsToSurface == 0 && Input.GetKey(ChimericOptions.TentMovementAutoEnable.Value) && !Input.GetKey(ChimericOptions.TentMovementEnable.Value)) {
+                    self.customPlayerGravity = 1f;
                     //self.mainBodyChunk.vel -= new Vector2(0f, 0.2f);
                 }
-                else if (!Input.GetKey(ChimericOptions.tentMovementAutoEnable.Value) || Input.GetKey(ChimericOptions.tentMovementEnable.Value)) {
-                    if (self.input[0].x != 0 || self.input[0].y != 0 && something.timer < 1f) {
-                        something.timer += 0.1f;
+                if (Input.GetKey(ChimericOptions.TentMovementEnable.Value) && connectionsToSurface != 0) {
+                    const float timerAddSub = 0.07f;
+                    if ((self.input[0].x != 0 || self.input[0].y != 0) && something.timer < 1f) {
+                        something.timer += timerAddSub;
                     }
                     else if (something.timer > 0f) {
-                        something.timer -= 0.1f;
+                        something.timer -= timerAddSub;
                     }
-                    self.mainBodyChunk.vel = Vector2.Lerp(new Vector2(0,0.84f*(self.room==null? 0 : self.room.gravity)), new Vector2(2.3f*connectionsToSurface*self.input[0].x, 2.3f*connectionsToSurface*self.input[0].y), something.timer);
+                    // Rotund world stuff affecting tentacle movement
+                    float rotundFactor = Plugin.rotund? (self.TotalMass >= 1.7f? self.TotalMass : 1f) : 1f;
+                    self.mainBodyChunk.vel = Vector2.Lerp(new Vector2(0,0.82f*(self.room==null? 0 : self.room.gravity)-((rotundFactor-1)*1.15f)), new Vector2(2.3f*connectionsToSurface*self.input[0].x/rotundFactor, 2.3f*connectionsToSurface*self.input[0].y-(rotundFactor-1)*1.15f), something.timer);
                     foreach (var chunk in self.bodyChunks)
                     {
                         if (chunk != self.mainBodyChunk)
@@ -168,14 +200,10 @@ namespace Chimeric {
                 }
                 #endregion
             }
-            if (something.stuckCreature != null) {
-                Debug.Log($"Caught Creature is {something.stuckCreature.PhysObject}");
-                something.stuckCreature.Update(self.evenUpdate);
-            }
         }
         public static void TentaclesFindPositionToGoTo(PlayerEx something, Player self, float startPos) {
-            int numerations = (self.room != null && self.room.game.IsStorySession && (self.room.world.region.name=="RM" || self.room.world.region.name=="SS" || self.room.world.region.name=="DM"))? 100 : 200;
-            float multiple = numerations==100? 2f : 1f;
+            int numerations = (self.room != null && self.room.game.IsStorySession && (self.room.world.region.name=="RM" || self.room.world.region.name=="SS" || self.room.world.region.name=="DM"))? 100 : self.room?.abstractRoom.name == "SB_L01"? 5 : 200;
+            float multiple = numerations==100? 2f : numerations==5? 40f : 1f;
             for (int i = 0; i < something.tentacles.Length; i++) {
                 if (something.tentacles[i].foundSurface && (Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].targetPosition) >= 250 || Custom.Dist(self.mainBodyChunk.pos, something.tentacles[i].iWantToGoThere) >= 250) && something.tentacles[i].hasConnectionSpot) {
                     something.tentacles[i].foundSurface = false;
@@ -219,7 +247,7 @@ namespace Chimeric {
                 }
                 if (Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > (something.tentacles[i].isPole? 5f:5f/*Can be adjusted maybe, rn it plays multiple times for poles*/) && something.automateMovement) {
                     something.tentacles[i].isAttatchedToSurface = 0;
-                    Vector2 direction = (something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos);
+                    Vector2 direction = something.tentacles[i].iWantToGoThere - something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos;
                     
                     something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos += direction / ((Custom.Dist(something.tentacles[i].pList[something.tentacles[i].pList.Length-1].pos, something.tentacles[i].iWantToGoThere) > 5f)? 9f:1f); //Tentacle Tip, controls speed tentacles move to their target pos
                     
@@ -262,17 +290,19 @@ namespace Chimeric {
                 }
             }
         }
-        public static void DrawTentacleCircles(PlayerEx something, Vector2 camPos, FSprite[] tentacle1Circles, FSprite[] tentacle2Circles, FSprite[] tentacle3Circles, FSprite[] tentacle4Circles) {
+        public static void DrawTentacleCircles(PlayerGraphics self, PlayerEx something, Vector2 camPos, FSprite[] tentacle1Circles, FSprite[] tentacle2Circles, FSprite[] tentacle3Circles, FSprite[] tentacle4Circles) {
+            Color rotBulbColor = SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 2);
             //Set the circle positions on the tentacles and color them
             for (int i = 0; i < something.tentacles.Length; i++) {
                 for (int j = 0; j < something.tentacles[i].cList.Length; j++) {
                     //base.Logger.LogDebug("Drawsprites");
                     //base.Logger.LogDebug(something.tentacles[i].cList[j].position);
+                    // Works, but could do with a rewrite to be less ugly.
                     if (i == 0) {
                         Vector2 vector = (something.tentacles[i].cList[j].pointA.pos-something.tentacles[i].cList[j].pointB.pos).normalized;
                         bool rotationSide = vector.x < 0;
                         tentacle1Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
-                        tentacle1Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                        tentacle1Circles[j].color = GetColor(rotBulbColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
                         tentacle1Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f) + something.tentacles[i].cList[j].rotation;
                         if (something.tentacles[i].cList[j].grayscale) {
                             tentacle1Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
@@ -283,7 +313,7 @@ namespace Chimeric {
                         bool rotationSide = vector.x < 0;
                         tentacle2Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle2Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                        tentacle2Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                        tentacle2Circles[j].color = GetColor(rotBulbColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
                         tentacle2Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
                         if (something.tentacles[i].cList[j].grayscale) {
                             tentacle2Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
@@ -294,7 +324,7 @@ namespace Chimeric {
                         bool rotationSide = vector.x < 0;
                         tentacle3Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle3Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                        tentacle3Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                        tentacle3Circles[j].color = GetColor(rotBulbColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
                         tentacle3Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
                         if (something.tentacles[i].cList[j].grayscale) {
                             tentacle3Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
@@ -305,7 +335,7 @@ namespace Chimeric {
                         bool rotationSide = vector.x < 0;
                         tentacle4Circles[j].SetPosition(something.tentacles[i].cList[j].position - camPos);
                         //self.player.room.AddObject(new Spark(tentacle4Circles[j].GetPosition() - new Vector2(20f,13f), new Vector2(-5,5), Color.cyan, null, 10, 20));
-                        tentacle4Circles[j].color = GetColor(something.rotEyeColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
+                        tentacle4Circles[j].color = GetColor(rotBulbColor, something.tentacles[i].cList[j].brightBackground, something.tentacles[i].cList[j].darkBackground);
                         tentacle4Circles[j].rotation = Mathf.Rad2Deg * -Mathf.Atan(vector.y / vector.x) - 90 + (rotationSide? -180f:0f);
                         if (something.tentacles[i].cList[j].grayscale) {
                             tentacle4Circles[j].element = Futile.atlasManager.GetElementWithName("lightgrayscalesprite");
@@ -315,12 +345,15 @@ namespace Chimeric {
             }
         }
         ///<summary> Update the color of the vignette sprite, and use inputs to do math to determine the center position. r + g are replaced, b + a are passed through </summary>
-        public static void UpdateVignette(RainWorld game, Player self, Color col, Vector2 camPos, bool visible = true) {
+        public static void UpdateVignette(RainWorld game, Player self, Vector2 camPos, Color newOuterColor, Color? newInnerColor = null, bool visible = true) {
             if (Plugin.vignetteEffect != null) {
-                float rVar = (self.mainBodyChunk.pos.x-camPos.x)/(game.screenSize.x);
-                float gVar = (self.mainBodyChunk.pos.y/**0.8f+80f*/-camPos.y)/(game.screenSize.y)/(86f/48f)+0.22f;    //Math numbers are gotten by doing the best thing ever, complete guesswork!
-                //Debug.Log($"{rVar} and {gVar} and {col.b} and {col.a}");
-                Plugin.vignetteEffect.color = new Color(rVar, gVar, col.b, col.a);
+                // Set the position to center the Vignette Effect on.
+                float xVar = (self.mainBodyChunk.pos.x-camPos.x)/(game.screenSize.x);
+                float yVar = (self.mainBodyChunk.pos.y-camPos.y)/(game.screenSize.y)/(86f/48f)+0.22f;    //Math numbers are gotten by doing the best thing ever, complete guesswork!
+                Shader.SetGlobalVector("_VignettePlayerPos", new Vector2(xVar, yVar));
+
+                Plugin.vignetteEffect.color = newOuterColor;
+                if (newInnerColor is Color newestColor) { Shader.SetGlobalColor("_VignetteInnerColor", newestColor); }
                 Plugin.vignetteEffect.isVisible = visible;
                 //Debug.Log($"Update Vignette. rVar: {rVar} gVar: {gVar} bodyX: {self.mainBodyChunk.pos.x-camPos.x} bodyY: {self.mainBodyChunk.pos.y-camPos.y}");
             }
@@ -329,9 +362,10 @@ namespace Chimeric {
             }
         }
         ///<summary> Hard-replacement of the Vignette color </summary>
-        public static void UpdateVignette(Color col, bool visible = true) {
+        public static void UpdateVignette(Color newOuterColor, Color? newInnerColor = null, bool visible = true) {
             if (Plugin.vignetteEffect != null) {
-                Plugin.vignetteEffect.color = new Color(col.r, col.g, col.b, col.a);
+                Plugin.vignetteEffect.color = newOuterColor;
+                if (newInnerColor is Color newestColor) { Shader.SetGlobalColor("_VignetteInnerColor", newestColor); }
                 Plugin.vignetteEffect.isVisible = visible;
                 //Debug.Log($"Default Color is: {Shader.GetGlobalColor("_InputColorA")}");
             }
