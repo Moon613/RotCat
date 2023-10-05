@@ -13,6 +13,14 @@ namespace Chimeric
 {
     public partial class Dynamo
     {
+        public static void Apply() {
+            On.PlayerGraphics.ctor += DynoGrafCtor;
+            On.PlayerGraphics.InitiateSprites += DynoInitSprites;
+            On.PlayerGraphics.DrawSprites += DynoGrafDrawSprites;
+            On.PlayerGraphics.Update += DynoGrafUpdate;
+            IL.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSpritesTail;
+            On.PlayerGraphics.AddToContainer += DynoAddToContainer;
+        }
         public static void DynoGrafDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             orig(self, sLeaser, rCam, timeStacker, camPos);
@@ -44,19 +52,7 @@ namespace Chimeric
                         sLeaser.sprites[something.initialFinSprite + i].rotation = Custom.VecToDeg(self.player.bodyChunks[1].Rotation)+90-(something.fList[i].additionalRotation * (something.fList[i].flipped? 1 : -1));
                     }
                     
-                    #region Colors
-                    if (self.useJollyColor) {
-                        sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.JollyColor(self.player.playerState.playerNumber, 2);
-                    }
-                    else if (PlayerGraphics.CustomColorsEnabled()) {
-                        sLeaser.sprites[something.initialFinSprite + i].color = PlayerGraphics.CustomColorSafety(2);
-                    }
-                    else if (!PlayerGraphics.CustomColorsEnabled()) {
-                        SlugBaseCharacter.TryGet(SlugBaseCharacter.Registry.Keys.Where(name => name.value == Plugin.DYNAMO_NAME).ToList()[0], out SlugBaseCharacter chara);
-                        SlugBase.Features.PlayerFeatures.CustomColors.TryGet(chara, out SlugBase.DataTypes.ColorSlot[] colors);
-                        sLeaser.sprites[something.initialFinSprite + i].color = colors[2].GetColor(self.player.playerState.playerNumber);
-                    }
-                    #endregion
+                    sLeaser.sprites[something.initialFinSprite + i].color = self.HypothermiaColorBlend(SlugBase.DataTypes.PlayerColor.GetCustomColor(self, 2));
                     
                     float addition = self.player.submerged? Mathf.Lerp(something.fList[i].swimRange[0], something.fList[i].swimRange[1], Mathf.Sin(something.fList[i].swimCycle)) : 0;
                     //Debug.Log($"addition is: {addition} and {something.fList[i].swimRange[0]} and {something.fList[i].swimRange[1]} and {Mathf.Sin(something.fList[i].swimCycle)}");
