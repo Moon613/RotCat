@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Chimeric
 {
-    public class EatingRot : CosmeticSprite
+    public class CreatureCorruptionBulb : CosmeticSprite
     {
         public float maxRad;
         public Color bodyColor;
@@ -12,7 +12,7 @@ namespace Chimeric
         public bool hideSpritesInPipe = false;
         public int indexInArray;
 
-        public EatingRot(float maxRad, Color bodyColor, Color xColor, Vector2 pos, FSprite sprite, AbstractCreature crit, int indexInArray) {
+        public CreatureCorruptionBulb(float maxRad, Color bodyColor, Color xColor, Vector2 pos, FSprite sprite, AbstractCreature crit, int indexInArray) : base() {
             this.maxRad = maxRad;
             this.bodyColor = bodyColor;
             this.xColor = xColor;
