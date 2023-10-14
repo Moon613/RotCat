@@ -186,16 +186,6 @@ namespace Chimeric
                         }
                     }
                 }
-                foreach (var obj in newRoom.updateList) {
-                    if (obj is Creature crit && Plugin.CreatureCWT.TryGetValue(crit.abstractCreature, out var thing)) {
-                        thing.redrawRotSprites = true;
-                        foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
-                            if (!self.room.drawableObjects.Contains(rotBulb)) {
-                                self.room.AddObject(rotBulb);
-                            }
-                        }
-                    }
-                }
             }
         }
         ///<summary>IL hook that replaces the sound of eating with daddy sounds</summary>
