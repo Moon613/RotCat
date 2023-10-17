@@ -24,6 +24,7 @@ namespace Chimeric
             On.Creature.SpitOutOfShortCut += SpitOutOfPipe;
             On.Player.Update += CompressCreature;
             // On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
+            On.Room.Update += Room_Update;
             IL.Player.EatMeatUpdate += ReplaceEatingSound;
             // These two should skip the template meatpoints check and use a value from CreatureCWT, but used with slugrot causes errors
             // On.Player.EatMeatUpdate += Player_EatMeatUpdate;
@@ -183,6 +184,19 @@ namespace Chimeric
                         thing.redrawRotSprites = true;
                         foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
                             self.room.AddObject(rotBulb);
+                        }
+                    }
+                }
+            }
+        }
+        public static void Room_Update(On.Room.orig_Update orig, Room self) {
+            orig(self);
+            foreach (var obj in self.updateList) {
+                if (obj is Creature crit && Plugin.CreatureCWT.TryGetValue(crit.abstractCreature, out var thing)) {
+                    thing.redrawRotSprites = true;  // This could cause lag potentially
+                    foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
+                        if (!self.drawableObjects.Contains(rotBulb)) {
+                            self.AddObject(rotBulb);
                         }
                     }
                 }
