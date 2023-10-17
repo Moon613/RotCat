@@ -23,8 +23,8 @@ namespace Chimeric
             On.Creature.SuckedIntoShortCut += SuckIntoPipe;
             On.Creature.SpitOutOfShortCut += SpitOutOfPipe;
             On.Player.Update += CompressCreature;
-            // On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
             On.Room.Update += Room_Update;
+            On.StaticWorld.InitCustomTemplates += StaticWorld_InitCustomTemplates;
             IL.Player.EatMeatUpdate += ReplaceEatingSound;
             // These two should skip the template meatpoints check and use a value from CreatureCWT, but used with slugrot causes errors
             // On.Player.EatMeatUpdate += Player_EatMeatUpdate;
