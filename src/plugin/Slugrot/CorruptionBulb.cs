@@ -60,7 +60,7 @@ namespace Chimeric
         }
         public override void Update(bool eu)
         {
-            if (crit.realizedCreature.slatedForDeletetion) {
+            if (crit.slatedForDeletion || crit.realizedCreature == null || crit.realizedCreature?.slatedForDeletetion == true) {
                 Destroy();
             }
             base.Update(eu);

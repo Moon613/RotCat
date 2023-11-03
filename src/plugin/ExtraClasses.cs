@@ -66,7 +66,7 @@ public class CreatureEx {
     public int maxNumOfSprites;
     public bool shouldFearDynamo = false;
     public int fearTime = -1;
-    public List<CreatureCorruptionBulb> yummersRotting = new List<CreatureCorruptionBulb>();
+    public List<CreatureCorruptionBulb> corruptionBulbs = new List<CreatureCorruptionBulb>();
     public int meat = 0;
 }
 ///<summary>The pivot points for the tentacles, where they can bend.</summary>

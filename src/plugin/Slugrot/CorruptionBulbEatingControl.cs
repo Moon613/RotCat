@@ -117,10 +117,10 @@ namespace Chimeric
                     Skip:
                     CreatureCorruptionBulb newCorruptionBulb = new CreatureCorruptionBulb(Random.Range(0.125f, 0.22f), randSprite.color, Color.Lerp(randSprite.color, accentColor, 0.9f), randSprite.GetPosition(), randSprite, creature.abstractCreature, sLeaser.sprites.IndexOf(randSprite));
                     self.owner.room.AddObject(newCorruptionBulb);
-                    thing.yummersRotting.Add(newCorruptionBulb);
+                    thing.corruptionBulbs.Add(newCorruptionBulb);
                 }
                 if (thing.redrawRotSprites) {
-                    foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting)
+                    foreach (CreatureCorruptionBulb rotBulb in thing.corruptionBulbs)
                     {
                         rotBulb.ReassignSprites(sLeaser.sprites[rotBulb.indexInArray]);
                         Debug.Log($"Reassigned to: {rotBulb.indexInArray}");
@@ -166,7 +166,7 @@ namespace Chimeric
             if (self is Player player) {
                 for (int i = 0; i < player.grasps.Length; i++) {
                     if (player.grasps[i] != null && player.grasps[i].grabbedChunk != null && player.grasps[i].grabbedChunk.owner is Creature crit && Plugin.CreatureCWT.TryGetValue(crit.abstractCreature, out var thing)) {
-                        foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
+                        foreach (CreatureCorruptionBulb rotBulb in thing.corruptionBulbs) {
                             rotBulb.hideSpritesInPipe = true;
                             //Debug.Log("Hidden sprites");
                             self.room.RemoveObject(rotBulb);
@@ -182,7 +182,7 @@ namespace Chimeric
                 for (int i = 0; i < player.grasps.Length; i++) {
                     if (player.grasps[i] != null && player.grasps[i].grabbedChunk != null && player.grasps[i].grabbedChunk.owner is Creature crit && Plugin.CreatureCWT.TryGetValue(crit.abstractCreature, out var thing)) {
                         thing.redrawRotSprites = true;
-                        foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
+                        foreach (CreatureCorruptionBulb rotBulb in thing.corruptionBulbs) {
                             self.room.AddObject(rotBulb);
                         }
                     }
@@ -194,7 +194,7 @@ namespace Chimeric
             foreach (var obj in self.updateList) {
                 if (obj is Creature crit && Plugin.CreatureCWT.TryGetValue(crit.abstractCreature, out var thing)) {
                     thing.redrawRotSprites = true;  // This could cause lag potentially
-                    foreach (CreatureCorruptionBulb rotBulb in thing.yummersRotting) {
+                    foreach (CreatureCorruptionBulb rotBulb in thing.corruptionBulbs) {
                         if (!self.drawableObjects.Contains(rotBulb)) {
                             self.AddObject(rotBulb);
                         }
