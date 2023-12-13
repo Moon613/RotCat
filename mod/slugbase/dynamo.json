@@ -1,19 +1,21 @@
 {
 	"id": "dynamo",
 	"name": "The Dynamo",
-	"description": "None lol",
+	"description": "Explore the water in ways no other creatures can,<LINE>and use your adaptations to defend yourself and thrive",
 	"features": {
 		"color": "0b4dcf",
 		"custom_colors": [
-			{"name": "Body", "story": "0b4dcf", "arena": ["0b4dcf", "479237", "999c29", "b33a3a"]},
+			{"name": "Body", "story": "0b4dcf", "arena": ["ffffff", "e5c607", "ff6ca5", "3800a2"]},
 			{"name": "Eyes", "story": "010101", "arena": ["101010", "101010", "101010", "101010"]},
-			{"name": "Fins", "story": "c3302f", "arena": ["c3302f", "823792", "9c7228", "b339a2"]}
+			{"name": "Fins", "story": "c3302f", "arena": ["c3302f", "00b5d2", "59c34a", "a20060"]}
 		],
 		"select_menu_scene": "slugcat_dynamo",
 		"sleep_scene": "",
 		"start_room": ["SL_S05"],
 		"food_min": 4,
 		"food_max": 6,
-		"world_state": ["Dynamo", "Rivulet"]
+		"world_state": ["Dynamo", "Rivulet"],
+		"CustomConversations": false,
+		"intro_slideshow": "dynamo_intro"
 	}
 }

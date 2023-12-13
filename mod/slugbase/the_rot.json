@@ -7,9 +7,9 @@
 		"custom_colors": [
 			{"name": "Body", "story": "1b0b21", "arena": ["1b0b21", "210b0b", "21200b", "c4c4c4"]},
 			{"name": "Eyes", "story": "0000FF", "arena": ["0000FF", "FF0000", "FFF900", "101010"]},
-			{"name": "Rot Eyes", "story": "0A0AFF", "arena": ["0A0AFF", "ff0a0a", "fff90a", "5a5a5a"]}
+			{"name": "Accent", "story": "0A0AFF", "arena": ["0A0AFF", "ff0a0a", "fff90a", "5a5a5a"]}
 		],
-		"start_room": ["RM_SFINAL", "GW_B05"],
+		"start_room": ["GW_B02"],
 		"select_menu_scene": "slugcat_rot",
 		"sleep_scene": "slugrot_sleep",
 		"weight": 1.1,
@@ -32,6 +32,10 @@
 		"cycle_length_max": 13,
 		"food_min": 7,
 		"food_max": 12,
-		"world_state": ["Slugrot", "Rivulet"]
+		"world_state": ["Slugrot", "Rivulet"],
+		"has_dreams": true,
+		"CustomConversations": true,
+		"intro_slideshow": "slugrot_intro",
+		"outro_slideshow": "slugrot_outro"
 	}
 }
