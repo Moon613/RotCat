@@ -8,7 +8,6 @@ using static System.Reflection.BindingFlags;
 using System;
 using System.Runtime.CompilerServices;
 using Random = UnityEngine.Random;
-using IL.RWCustom;
 
 namespace Chimeric
 {
@@ -58,16 +57,7 @@ namespace Chimeric
                     self.bodyChunks[0].vel += new Vector2(Random.Range(-3.65f, 3.65f), Random.Range(-1f, 1f));
                 }
                 if (Counter.Value == StartPain) {
-                    self.stun = 300;
-                    self.dazed = 300;
-                    rotBehavior.AirVoice(SoundID.SS_AI_Talk_4);
-                    self.room.PlaySound(SoundID.SL_AI_Pain_1, self.firstChunk, false, 0.7f, 0.5f);
-                    self.bodyChunks[1].vel.x -= 5f;
                     self.room.AddObject(new PebblesPanicDisplay(self));
-                }
-                if (Counter.Value == StartPain + 30) {
-                    rotBehavior.AirVoice(SoundID.SS_AI_Talk_1);
-                    self.room.PlaySound(SoundID.SL_AI_Pain_2, self.firstChunk, false, 0.87f, 0.45f);
                 }
             }
         }
@@ -181,8 +171,14 @@ namespace Chimeric
                     190,
                     210,
                     240,
-                    320
+                    320,
+                    30
                 };
+                oracle.stun = 300;
+                oracle.dazed = 300;
+                (oracle.oracleBehavior as SSOracleRotBehavior)?.AirVoice(SoundID.SS_AI_Talk_4);
+                oracle.room.PlaySound(SoundID.SL_AI_Pain_1, oracle.firstChunk, false, 0.7f, 0.5f);
+                oracle.bodyChunks[1].vel.x -= 5f;
                 Debug.Log(oracle.room.roomSettings.GetEffect(RoomSettings.RoomEffect.Type.DarkenLights)?.amount);
                 Debug.Log(oracle.room.roomSettings.GetEffect(RoomSettings.RoomEffect.Type.Darkness)?.amount);
                 Debug.Log(oracle.room.roomSettings.GetEffect(RoomSettings.RoomEffect.Type.Contrast)?.amount);
@@ -270,6 +266,10 @@ namespace Chimeric
                 if (timer >= timings[4]) {
                     oracle.room.roomSettings.effects.RemoveAll(eff => eff.type == RoomSettings.RoomEffect.Type.DarkenLights || eff.type == RoomSettings.RoomEffect.Type.Darkness || eff.type == RoomSettings.RoomEffect.Type.Contrast);
                     Destroy();
+                }
+                if (timer == timings[5]) {
+                    (oracle.oracleBehavior as SSOracleRotBehavior)?.AirVoice(SoundID.SS_AI_Talk_1);
+                    oracle.room.PlaySound(SoundID.SL_AI_Pain_2, oracle.firstChunk, false, 0.87f, 0.45f);
                 }
             }
         }
