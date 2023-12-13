@@ -1,24 +1,16 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace Chimeric
+namespace Chimeric;
+public sealed class CreatureTemplateType {
+    [AllowNull] public static CreatureTemplate.Type BabyAquapede = new(nameof(BabyAquapede), true);
+}
+public static class SandboxUnlockID {
+    [AllowNull] public static MultiplayerUnlocks.SandboxUnlockID BabyAquapede = new(nameof(BabyAquapede), true);
+}
+public static class SoundEnums
 {
-    public sealed class CreatureTemplateType {
-        [AllowNull] public static CreatureTemplate.Type BabyAquapede = new(nameof(BabyAquapede), true);
+    public static void RegisterValues() {
+        Silence = new SoundID("Silence", true);
     }
-    public static class SandboxUnlockID {
-        [AllowNull] public static MultiplayerUnlocks.SandboxUnlockID BabyAquapede = new(nameof(BabyAquapede), true);
-    }
-    public static class ConversationID {
-        public static void RegisterValues() {
-            PebblesMeetRot = new Conversation.ID("PebblesMeetRot", true);
-        }
-        [AllowNull] public static Conversation.ID PebblesMeetRot;
-    }
-    public static class SoundEnums
-    {
-        public static void RegisterValues() {
-            Silence = new SoundID("Silence", true);
-        }
-        [AllowNull] public static SoundID Silence;
-    }
+    [AllowNull] public static SoundID Silence;
 }
