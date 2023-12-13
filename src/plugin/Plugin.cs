@@ -19,7 +19,7 @@ namespace Chimeric
     {
         public const string MOD_NAME = "Chimerical";
         internal bool init = false;
-        internal static ConditionalWeakTable<Player, PlayerEx> tenticleStuff = new ConditionalWeakTable<Player, PlayerEx>();
+        internal static ConditionalWeakTable<Player, PlayerEx> playerCWT = new ConditionalWeakTable<Player, PlayerEx>();
         internal static ConditionalWeakTable<Spark, SparkEx> sparkLayering = new ConditionalWeakTable<Spark, SparkEx>();
         internal static ConditionalWeakTable<AbstractCreature, CreatureEx> CreatureCWT = new ConditionalWeakTable<AbstractCreature, CreatureEx>();
         public static FContainer darkContainer = new FContainer();
@@ -153,8 +153,8 @@ namespace Chimeric
         }
         public static void PlayerCtor(On.Player.orig_ctor orig, Player self, AbstractCreature abstractCreature, World world) {
             orig(self, abstractCreature, world);
-            tenticleStuff.Add(self, new PlayerEx());
-            tenticleStuff.TryGetValue(self, out var something);
+            playerCWT.Add(self, new PlayerEx());
+            playerCWT.TryGetValue(self, out var something);
             if (self.slugcatStats.name.value == ROT_NAME) {
                 something.isRot = true;
                 SlugRot.RotCtor(self, something);

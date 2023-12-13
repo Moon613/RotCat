@@ -34,7 +34,7 @@ namespace Chimeric
                 if (self.playerState.playerNumber == 0) { localTimer.Value++; }
             }
             #endregion
-            if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
+            if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot) {
                 //Debug.Log(self.mainBodyChunk.pos);
                 if (Input.GetKey(KeyCode.Y)) {
                     // SlugBase.Assets.CustomScene.SetSelectMenuScene((self.abstractCreature.world.game.session as StoryGameSession)?.saveState, new ("slugrot_sleep"));
@@ -205,7 +205,7 @@ namespace Chimeric
             }
         }
         public static void PlayerDie(On.Player.orig_Die orig, Player self) {
-            if (self != null && Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot && something.stuckCreature != null) {
+            if (self != null && Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot && something.stuckCreature != null) {
                 something.stuckCreature.ChangeOverlap(true);
                 something.stuckCreature.Deactivate();
                 #pragma warning disable CS8625

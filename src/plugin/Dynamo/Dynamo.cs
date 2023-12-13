@@ -24,7 +24,7 @@ public class Dynamo
     }
     public static CreatureTemplate.Relationship AquaFriendDyno(On.CentipedeAI.orig_IUseARelationshipTracker_UpdateDynamicRelationship orig, CentipedeAI self, DynamicRelationship dRelation) {
         Creature? trackedCreature = dRelation?.trackerRep?.representedCreature?.realizedCreature;
-        if ((self.centipede.Template.type == MoreSlugcatsEnums.CreatureTemplateType.AquaCenti || self.centipede.Template.type == CreatureTemplate.Type.Centiwing) && trackedCreature is Player player && Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
+        if ((self.centipede.Template.type == MoreSlugcatsEnums.CreatureTemplateType.AquaCenti || self.centipede.Template.type == CreatureTemplate.Type.Centiwing) && trackedCreature is Player player && Plugin.playerCWT.TryGetValue(player, out var something) && something.isDynamo) {
             //Debug.Log("Made it to changing relationship");
             if (self.centipede.abstractCreature?.abstractAI?.RealAI?.preyTracker?.currentPrey?.critRep?.representedCreature != null && self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.currentPrey.critRep.representedCreature.realizedCreature == player) {
                 self.centipede.abstractCreature.abstractAI.RealAI.preyTracker.prey.RemoveAll(c => c.critRep.representedCreature.realizedCreature == player);
@@ -46,7 +46,7 @@ public class Dynamo
             for (int i = 0; i < self.room.abstractRoom.creatures.Count; i++) {
                 Creature crit = self.room.abstractRoom.creatures[i].realizedCreature;
                 //Debug.Log($"randNum is {randNum}");
-                if (Plugin.CreatureCWT.TryGetValue(self.abstractCreature, out var thing) && thing.shouldFearDynamo && crit is Player player && Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo && thing.fearTime > 0) {
+                if (Plugin.CreatureCWT.TryGetValue(self.abstractCreature, out var thing) && thing.shouldFearDynamo && crit is Player player && Plugin.playerCWT.TryGetValue(player, out var something) && something.isDynamo && thing.fearTime > 0) {
                     List<DynamicRelationship>? relationships = self.abstractCreature.abstractAI?.RealAI.relationshipTracker.relationships;
                     thing.fearTime--;
                     //Debug.Log($"Feartime is: {thing.fearTime}");
@@ -65,7 +65,7 @@ public class Dynamo
                         }
                     }
                 }
-                else if ((!thing.shouldFearDynamo && crit is Player player1 && Plugin.tenticleStuff.TryGetValue(player1, out var something1) && something1.isDynamo && self.grasps != null && !self.grasps.Any<Creature.Grasp>(x => x?.grabbed is VultureMask)) || thing.fearTime == 0) {
+                else if ((!thing.shouldFearDynamo && crit is Player player1 && Plugin.playerCWT.TryGetValue(player1, out var something1) && something1.isDynamo && self.grasps != null && !self.grasps.Any<Creature.Grasp>(x => x?.grabbed is VultureMask)) || thing.fearTime == 0) {
                     self.abstractCreature.abstractAI?.RealAI.threatTracker?.RemoveThreatCreature(crit.abstractCreature);
                     if (thing.fearTime > 0) {
                         thing.fearTime = 0;
@@ -77,7 +77,7 @@ public class Dynamo
         }
         if (self is not Centipede centi || (!centi.AquaCenti && !centi.Centiwing) || self.grasps == null || self.grasps.Length <= 0) { return; }
         foreach (Creature.Grasp? grasp in self.grasps) {
-            if (grasp == null || grasp.grabbedChunk.owner is not Player player || (Plugin.tenticleStuff.TryGetValue(player, out var something) && !something.isDynamo))
+            if (grasp == null || grasp.grabbedChunk.owner is not Player player || (Plugin.playerCWT.TryGetValue(player, out var something) && !something.isDynamo))
             {
                 continue;
             }
@@ -89,7 +89,7 @@ public class Dynamo
     public static void DynoUpdate(On.Player.orig_Update orig, Player self, bool eu) {
         var prevVel = self.mainBodyChunk.vel;
         bool startSubmerged = self.submerged;
-        if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isDynamo) {
+        if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isDynamo) {
             if (something.canPlayShockSound > 0) {
                 something.canPlayShockSound--;
             }
@@ -254,7 +254,7 @@ public class Dynamo
     }
     public static void DynoUpdateBodyMode(On.Player.orig_UpdateBodyMode orig, Player self) {
         orig(self);
-        if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isDynamo) {
+        if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isDynamo) {
             if (self.animation == Player.AnimationIndex.Roll) {
                 if (self.rollCounter <= 10) {
                     self.bodyChunks[0].vel *= 0.8f;
@@ -302,7 +302,7 @@ public class Dynamo
         // Grab the player from the top of the stack, and evaluate if it is Dynamo
         cursor.Emit(OpCodes.Ldarg_0);
         cursor.EmitDelegate((Player player) => {
-            if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isDynamo) {
+            if (Plugin.playerCWT.TryGetValue(player, out var something) && something.isDynamo) {
                 //Debug.Log("Doing things!");
                 return true;
             }

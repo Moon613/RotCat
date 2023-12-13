@@ -61,7 +61,7 @@ namespace Chimeric
             PhysicalObject source = noise.sourceObject; 
             //Debug.Log($"{source} and {source.GetType()}");
             for (int i = 0; i < self.PlayersInRoom.Count; i++) {
-                if (source != self.PlayersInRoom[i] && Plugin.tenticleStuff.TryGetValue(self.PlayersInRoom[i], out PlayerEx player) && player.isRot && (player.hearingCooldown <= 0 || CalculateMod5PlusMinus1(player.hearingCooldown) || player.hearingCooldown==40) && Custom.Dist(self.PlayersInRoom[i].mainBodyChunk.pos, noise.pos) <= noise.strength*1.5f) {
+                if (source != self.PlayersInRoom[i] && Plugin.playerCWT.TryGetValue(self.PlayersInRoom[i], out PlayerEx player) && player.isRot && (player.hearingCooldown <= 0 || CalculateMod5PlusMinus1(player.hearingCooldown) || player.hearingCooldown==40) && Custom.Dist(self.PlayersInRoom[i].mainBodyChunk.pos, noise.pos) <= noise.strength*1.5f) {
                     if (ChimericOptions.EnableVignette.Value) {
                         self.AddObject(new CreaturePing(noise.pos, Color.white, noise.strength/75f, self));
                     }
@@ -79,11 +79,11 @@ namespace Chimeric
             if (self.room != null && (self.room.game.session.characterStats.name.value == Plugin.ROT_NAME || !self.room.game.IsStorySession)) {
                 //Debug.Log($"Volume is: {vol}. Pitch is: {pitch}. SoundID is: {soundID}");
                 if (self.room != null && controller is ChunkSoundEmitter c && c.chunk.owner is Creature) {
-                    if (c.chunk.owner is Player p && p is not null && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot) {
+                    if (c.chunk.owner is Player p && p is not null && Plugin.playerCWT.TryGetValue(p, out var player) && player.isRot) {
                         return;
                     }
                     for (int i = 0; i < self.room.PlayersInRoom.Count; i++) {
-                        if (ChimericOptions.EnableVignette.Value && Plugin.tenticleStuff.TryGetValue(self.room.PlayersInRoom[i], out var player1) && player1.isRot && Custom.Dist(self.room.PlayersInRoom[i].mainBodyChunk.pos, controller.pos) < 650 && CalculateMod5PlusMinus1(player1.smolHearingCooldown)) {
+                        if (ChimericOptions.EnableVignette.Value && Plugin.playerCWT.TryGetValue(self.room.PlayersInRoom[i], out var player1) && player1.isRot && Custom.Dist(self.room.PlayersInRoom[i].mainBodyChunk.pos, controller.pos) < 650 && CalculateMod5PlusMinus1(player1.smolHearingCooldown)) {
                             self.room.AddObject(new CreaturePing(controller.pos, Color.white, vol*1.5f, self.room));
                             player1.smolHearingCooldown = 10;
                             break;
@@ -94,13 +94,13 @@ namespace Chimeric
         }
         public static void RotCatSuckIntoShortcut(On.Creature.orig_SuckedIntoShortCut orig, Creature self, IntVector2 entrancePos, bool carriedByOther) {
             orig(self, entrancePos, carriedByOther);
-            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
+            if (Plugin.vignetteEffect != null && self is Player p && Plugin.playerCWT.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
                 Functions.UpdateVignette(Color.black, Color.black);
             }
         }
         public static void RotCatSpitOutOfShortcut(On.Creature.orig_SpitOutOfShortCut orig, Creature self, IntVector2 pos, Room newRoom, bool spitOutAllSticks) {
             orig(self, pos, newRoom, spitOutAllSticks);
-            if (Plugin.vignetteEffect != null && self is Player p && Plugin.tenticleStuff.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
+            if (Plugin.vignetteEffect != null && self is Player p && Plugin.playerCWT.TryGetValue(p, out var player) && player.isRot && ChimericOptions.EnableVignette.Value) {
                 Functions.UpdateVignette(Color.black, new Color(0f, 0f, 0f, 0.2f));
             }
         }

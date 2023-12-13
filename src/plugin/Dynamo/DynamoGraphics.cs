@@ -22,7 +22,7 @@ namespace Chimeric
         public static void DynoGrafDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
         {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isDynamo) {
                 //Debug.Log($"{sLeaser.sprites[3].color.ToString()}");
                 if (something.crawlToRoll) {
                     sLeaser.sprites[1].SetPosition(new Vector2(self.player.bodyChunks[1].pos.x + (5f * self.player.flipDirection), self.player.bodyChunks[1].pos.y + 4.5f) - camPos);
@@ -76,7 +76,7 @@ namespace Chimeric
         public static void DynoGrafUpdate(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
         {
             orig(self);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isDynamo) {
                 //Debug.Log(self.player.bodyChunks[0].pos.y - self.player.bodyChunks[1].pos.y);
                 //Debug.Log(self.player.animation.ToString().ToLower());
                 if (self.player.input[0].pckp && self.player.bodyChunks[0].pos.y <= self.player.bodyChunks[1].pos.y+11f && self.player.bodyChunks[0].pos.y >= self.player.bodyChunks[1].pos.y-11f && self.player.animation == Player.AnimationIndex.None && self.player.bodyMode == Player.BodyModeIndex.Crawl) {
@@ -175,7 +175,7 @@ namespace Chimeric
         public static void DynoInitSprites(On.PlayerGraphics.orig_InitiateSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam)
         {
             orig(self, sLeaser, rCam);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isDynamo) {
                 Debug.Log($"Initiate Sprites Dynamo");
                 if (sLeaser.sprites[2] is TriangleMesh tail)
                 {
@@ -236,7 +236,7 @@ namespace Chimeric
         public static void DynoGrafCtor(On.PlayerGraphics.orig_ctor orig, PlayerGraphics self, PhysicalObject ow)
         {
             orig(self, ow);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isDynamo) {
                 Array.Resize<TailSegment>(ref self.tail, 7);
                 self.tail[0] = new TailSegment(self, 6f, 4.1f, null, 0.85f, 1f, 1f, true);
                 self.tail[1] = new TailSegment(self, 5.6f, 6.5f, self.tail[0], 0.85f, 1f, 0.5f, true);
@@ -250,7 +250,7 @@ namespace Chimeric
         public static void DynoAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContainer)
         {
             orig(self, sLeaser, rCam, newContainer);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isDynamo && sLeaser.sprites.Length > 13 && sLeaser.sprites != null) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isDynamo && sLeaser.sprites.Length > 13 && sLeaser.sprites != null) {
                 for (int i = 0; i < sLeaser.sprites?.Length-something.initialFinSprite; i++) {
                     sLeaser.sprites?[something.initialFinSprite + i].RemoveFromContainer();
                     rCam.ReturnFContainer("Midground").AddChild(sLeaser.sprites?[something.initialFinSprite + i]);
@@ -287,7 +287,7 @@ namespace Chimeric
                     {
                         return false;
                     }
-                    if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && !something.isDynamo) {
+                    if (Plugin.playerCWT.TryGetValue(self.player, out var something) && !something.isDynamo) {
                         return false;
                     }
 

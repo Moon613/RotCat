@@ -14,7 +14,7 @@ namespace Chimeric
             //base.Logger.LogDebug("Initiating Sprites");
             orig(self, sLeaser, rCam);
             //base.Logger.LogDebug(sLeaser.sprites.Length);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isRot) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isRot) {
                 something.faceAtlas = Futile.atlasManager.LoadAtlas("atlases/RotFace");
                 Array.Resize<FSprite>(ref sLeaser.sprites, sLeaser.sprites.Length + something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2 /*Multiply by 2 for the X sprites for each one*/));
                 something.initialBodyRotSprite = sLeaser.sprites.Length - (something.tentacles.Length + something.decorativeTentacles.Length + something.totalCircleSprites + (something.bodyRotSpriteAmount * 2));
@@ -65,7 +65,7 @@ namespace Chimeric
         }
         public static void RotDrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos) {
             orig(self, sLeaser, rCam, timeStacker, camPos);
-            if (Plugin.tenticleStuff.TryGetValue(self.player, out var something) && something.isRot) {
+            if (Plugin.playerCWT.TryGetValue(self.player, out var something) && something.isRot) {
                 if (Plugin.vignetteEffect != null && self.player.room != null && ChimericOptions.EnableVignette.Value && self.player.room.game.IsStorySession && self.player.room.game.StoryCharacter.value == Plugin.ROT_NAME) {
                     Functions.UpdateVignette(self.player.room.game.rainWorld, self.player, camPos, Plugin.vignetteEffect.color);
                 }
@@ -220,7 +220,7 @@ namespace Chimeric
         }
         public static void RotAddToContainer(On.PlayerGraphics.orig_AddToContainer orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, FContainer newContainer) {
             orig(self, sLeaser, rCam, newContainer);
-            Plugin.tenticleStuff.TryGetValue(self.player, out var something);
+            Plugin.playerCWT.TryGetValue(self.player, out var something);
             if (something.isRot) {
                 //base.Logger.LogDebug("sLeaser length");
                 //base.Logger.LogDebug(sLeaser.sprites.Length);

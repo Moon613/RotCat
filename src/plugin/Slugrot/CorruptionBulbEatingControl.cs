@@ -50,7 +50,7 @@ namespace Chimeric
         public static void PlayerEatsCreature(On.Player.orig_EatMeatUpdate orig, Player self, int graspIndex)
         {
             orig(self, graspIndex);
-            if (self.eatMeat > 20 && Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
+            if (self.eatMeat > 20 && Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot) {
                 Creature creature;
                 if (self.grasps[graspIndex].grabbedChunk.owner is not Creature crit) { return; } 
                 else { creature = crit; }
@@ -72,7 +72,7 @@ namespace Chimeric
         ///<summary>Kill the creature when you toss it</summary>
         public static void TossAndRemoveCreature(On.Player.orig_TossObject orig, Player self, int grasp, bool eu) {
             orig(self, grasp, eu);
-            if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot && self.grasps[grasp].grabbed is Creature crit) {
+            if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot && self.grasps[grasp].grabbed is Creature crit) {
                 something.eating = false;
                 if (crit.State.meatLeft <= 0 && crit.Template.meatPoints > 0) { // Probably fix by removing Template check here
                     crit.Destroy();
@@ -108,7 +108,7 @@ namespace Chimeric
                     }
                     Color accentColor;
                     foreach (var grasp in creature.grabbedBy) {
-                        if (grasp != null && grasp.grabber is Player p && Plugin.tenticleStuff.TryGetValue(p, out var something)) {
+                        if (grasp != null && grasp.grabber is Player p && Plugin.playerCWT.TryGetValue(p, out var something)) {
                             accentColor = SlugBase.DataTypes.PlayerColor.GetCustomColor(p.graphicsModule as PlayerGraphics, 2);
                             goto Skip;
                         }
@@ -139,7 +139,7 @@ namespace Chimeric
         }
         public static void CompressCreature(On.Player.orig_Update orig, Player self, bool eu) {
             orig(self, eu);
-            if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
+            if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot) {
                 foreach (var grasp in self.grasps) {
                     if (grasp != null && grasp.grabbed is Creature creature && Plugin.CreatureCWT.TryGetValue(creature.abstractCreature, out var crit) && crit.isBeingEaten && something.eating) {
                         foreach (PhysicalObject.BodyChunkConnection connection in creature.bodyChunkConnections) {
@@ -210,7 +210,7 @@ namespace Chimeric
             }
             cursor.Emit(OpCodes.Ldarg_0);
             cursor.EmitDelegate((SoundID sound, Player self) => {
-                if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
+                if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot) {
                     Debug.Log("Replacing sound");
                     //Debug.Log(sound);
                     sound = SoundID.Daddy_And_Bro_Tentacle_Grab_Creature;
@@ -224,7 +224,7 @@ namespace Chimeric
             cursor.Emit(OpCodes.Ldarg_0);
             cursor.EmitDelegate((SoundID sound, Player self) => {
                 // Rather then make a label and skip to it, replacing the sound with the conditions it easier, does the same thing, and has less IL steps
-                if (Plugin.tenticleStuff.TryGetValue(self, out var something) && something.isRot) {
+                if (Plugin.playerCWT.TryGetValue(self, out var something) && something.isRot) {
                     Debug.Log("Replacing 2nd sound");
                     //Debug.Log(sound);
                     if (!something.eating) {

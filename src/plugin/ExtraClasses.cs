@@ -314,7 +314,7 @@ public class AbstractOnTentacleStick : AbstractPhysicalObject.AbstractObjectStic
         PhysicalObject? physObj = PhysObject.realizedObject;
         if (physObj != null && Player.realizedObject is Player player)
         {
-            if (Plugin.tenticleStuff.TryGetValue(player, out var something) && something.isRot)
+            if (Plugin.playerCWT.TryGetValue(player, out var something) && something.isRot)
             {
                 physObj.bodyChunks[ConnectedChunk].MoveFromOutsideMyUpdate(eu, something.tentacles[0].pList[something.tentacles[0].pList.Length - 1].pos);
                 foreach (var chunk in physObj.bodyChunks)
