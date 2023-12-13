@@ -3,10 +3,10 @@
 	"name": "Chimerical Expansion",
 	"version": "0.2.0",
 	"hide_version": false,
-	"authors": "Art: Lurzard and Haliphron\nRegion Creation: Turt, Milm, Moon\nOriginal Idea for Dynamo: Haliphron\nCode: Moon",
+	"authors": "Art: Lurzard and Haliphron\nOriginal Idea for Dynamo: Haliphron\nCode: Moon",
 	"description": "Play as two unique new slugcats and discover more of the happenings of the world",
-	"requirements": ["slime-cubed.slugbase"],
-	"requirements_names": ["Slugbase"],
+	"requirements": ["moreslugcats", "slime-cubed.slugbase", "regionkit", "pom", "fisobs", "crs"],
+	"requirements_names": ["More Slugcats", "Slugbase", "Region Kit", "POM", "Fisobs", "Custom Region Support"],
 	"checksum_override_version": false,
 	"tags" : []
 }
