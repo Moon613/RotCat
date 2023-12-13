@@ -5,6 +5,8 @@ using System.Security.Permissions;
 using System;
 using System.Runtime.CompilerServices;
 using Fisobs.Core;
+using BepInEx.Logging;
+using System.Diagnostics.CodeAnalysis;
 
 
 #pragma warning disable CS0618 // Type or member is obsolete
@@ -17,6 +19,10 @@ namespace Chimeric
     [BepInPlugin("moon.chimeric", MOD_NAME, "0.0.2")]
     public class Plugin : BaseUnityPlugin
     {
+        [AllowNull] new internal static ManualLogSource Logger;
+        public Plugin() {
+            Logger = base.Logger;
+        }
         public const string MOD_NAME = "Chimerical";
         internal bool init = false;
         internal static ConditionalWeakTable<Player, PlayerEx> playerCWT = new ConditionalWeakTable<Player, PlayerEx>();
